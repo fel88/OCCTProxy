@@ -1,0 +1,10 @@
+*.7z
+*.patch
+*.zip
+packages/
+.vs/
+*.user
+bin/
+obj/
+win64/
+*.htm

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>OCCTProxy</id>
+    <version>1.0.0</version>
+    <title>OpenCascade hybrid proxy</title>
+    <authors>fel88</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <!-- <icon>icon.png</icon> -->
+    <projectUrl>https://github.com/fel88/OCCTProxy</projectUrl>
+    <description>OpenCascade hybrid proxy</description>
+    
+    <copyright>Copyrigth 2025</copyright>
+    
+  </metadata>
+  <files>
+    <!-- Include the compiled C++/CLI assembly (.dll) -->
+    <!-- Adjust the source path to match your actual build output location 
+    <file src="bin\$(Platform)\$(Configuration)\MyCppCliProject.dll" target="lib\net472\MyCppCliProject.dll" />-->
+
+    <!-- Include the ijwhost.dll if necessary for .NET Core/5+ -->
+     <file src="..\win64\bind\OCCTProxy.runtimeconfig.json" target="lib\net8.0\OCCTProxy.runtimeconfig.json" /> 
+     <file src="..\win64\bind\OCCTProxy.lib" target="lib\net8.0\OCCTProxy.lib" /> 
+     <file src="..\win64\bind\OCCTProxy.exp" target="lib\net8.0\OCCTProxy.exp" /> 
+     <file src="..\win64\bind\OCCTProxy.deps.json" target="lib\net8.0\OCCTProxy.deps.json" /> 
+     <file src="..\win64\bind\OCCTProxy.Common.deps.json" target="lib\net8.0\OCCTProxy.Common.deps.json" /> 
+     <file src="..\win64\bind\OCCTProxy.Common.dll" target="lib\net8.0\OCCTProxy.Common.dll" /> 
+     <file src="..\win64\bind\OCCTProxy.dll" target="lib\net8.0\OCCTProxy.dll" /> 
+     <file src="..\win64\bind\ijwhost.dll" target="lib\net8.0\ijwhost.dll" /> 
+
+    <!-- Include MSBuild props and targets files for automatic integration 
+    <file src="build\MyCppCliPackage.props" target="build\MyCppCliPackage.props" />
+    <file src="build\MyCppCliPackage.targets" target="build\MyCppCliPackage.targets" />-->
+  </files>
+</package>

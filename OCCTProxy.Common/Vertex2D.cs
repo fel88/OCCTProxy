@@ -9,11 +9,11 @@ namespace Cascade.Common
         {
             X = x;
             Y = y;
-            
+
         }
         public double X { get; set; }
         public double Y { get; set; }
-        
+
     }
-    
+
 }

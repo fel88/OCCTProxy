@@ -3735,14 +3735,7 @@ public:
 		aWriter.Write(aComp, theFileName.ToCString());
 		return true;
 	}
-	enum class SelectionModeEnum {
-		None = -1,
-		Shape = 0,
-		Vertex = 1,
-		Edge = 2,
-		Wire = 3,
-		Face = 4
-	};
+	
 
 	void ResetSelectionMode() {
 		Handle(AIS_InteractiveContext) theCtx = myAISContext();
@@ -4631,10 +4624,18 @@ public:
 		//	const TopoDS_Shape& anFace = myFacesMap(i);
 		//	// Do something with 'anEdge'
 		//}
-
+			
 		for (TopExp_Explorer exp(shape0, TopAbs_FACE); exp.More(); exp.Next())
 		{
 			auto ttt = exp.Current();
+			const auto& aFace1 = TopoDS::Face(ttt);
+
+			if (aFace1.IsNull())
+				continue;
+
+			auto ind = GetShapeIndex(ttt);
+			if (ind != hh.bindId)
+				continue;
 
 			for (TopExp_Explorer exp2(modified, TopAbs_FACE); exp2.More(); exp2.Next())
 			{
@@ -4644,14 +4645,9 @@ public:
 					break;
 				}
 			}
-		}
 
-		for (TopExp_Explorer exp(shape0, TopAbs_FACE); exp.More(); exp.Next())
-		{
-			auto ttt = exp.Current();
 			TopTools_ListOfShape modifiedFaces = htool.Modified(ttt);
 
-			auto ind = GetShapeIndex(ttt);
 			ttt = modifiedFaces.First();
 			//ttt = ttt.Located(object1->LocalTransformation());
 

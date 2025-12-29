@@ -4885,8 +4885,8 @@ public:
 		bool b = false;
 		for (TopExp_Explorer edgeExplorer(shape0, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
 			auto ttt = edgeExplorer.Current();
-			auto ind = AddOrGetShapeIndex(ttt);
-			ttt = ttt.Located(object1->LocalTransformation());
+			auto ind = GetShapeIndex(ttt);
+			//ttt = ttt.Located(object1->LocalTransformation());
 
 			const auto& edgee = TopoDS::Edge(ttt);
 
@@ -4897,8 +4897,8 @@ public:
 			for (auto edge : edges) {
 				//todo fix
 				//if (ttt3 == edge.handleT) 
+				if (ind == edge.bindId)
 				{
-
 					chamferOp.Add(s, edgee);
 					b = true;
 					break;
@@ -4911,6 +4911,9 @@ public:
 
 		chamferOp.Build();
 		auto shape = chamferOp.Shape();
+		auto trsf = GetObjectMatrix(h1);
+		shape = BRepBuilderAPI_Transform(shape, trsf, Standard_True);
+
 		auto ais = new AIS_Shape(shape);
 		myAISContext()->Display(ais, false);
 		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();

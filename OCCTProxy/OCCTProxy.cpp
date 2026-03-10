@@ -128,7 +128,8 @@
 // list of required OCCT libraries
 
 
-using namespace Cascade::Common;
+using namespace OCCTProxy::Common;
+using namespace OCCTProxy::Common::Interfaces;
 using namespace OpenTK::Mathematics;
 using namespace System::Collections::Generic;
 
@@ -218,11 +219,47 @@ public:
 	double Radius;
 };
 
-public ref class SurfInfo {
+public ref class SurfInfo : public ISurfInfo {
 public:
-	Vector3d Position;
-	Vector3d COM;//center of mass
-	int BindId;
+	Vector3d _position;
+	Vector3d _COM;//center of mass
+	// A read-write property with custom logic
+	virtual property Vector3d COM
+	{
+		Vector3d get()
+		{
+			return this->_COM;
+		}
+		void set(Vector3d v)
+		{
+			this->_COM = v;
+		}
+	}
+
+	virtual property Vector3d Position
+	{
+		Vector3d get()
+		{
+			return this->_position;
+		}
+		void set(Vector3d v)
+		{
+			this->_position = v;
+		}
+	}
+	virtual property int BindId
+	{
+		int get()
+		{
+			return this->_bindId;
+		}
+		void set(int v)
+		{
+			this->_bindId = v;
+		}
+	}
+
+	int _bindId;
 	int AisShapeBindId;//parent
 };
 
@@ -1949,6 +1986,7 @@ public:
 };
 
 
+namespace OCCTProxy {
 /// <summary>
 /// Proxy class encapsulating calls to OCCT C++ classes within 
 /// C++/CLI class visible from .Net (CSharp)
@@ -4597,11 +4635,11 @@ public:
 		return ret;
 	}
 
-	SurfInfo^ GetFaceInfo(ManagedObjHandle^ h1) {
+		ISurfInfo^ GetFaceInfo(ManagedObjHandle^ h1) {
 		return GetFaceInfo(h1->AisShapeBindId, h1);
 	}
 
-	SurfInfo^ GetFaceInfo(int parentId, ManagedObjHandle^ h1) {
+		ISurfInfo^ GetFaceInfo(int parentId, ManagedObjHandle^ h1) {
 		auto hh = h1->ToObjHandle();
 		const auto object1 = impl->findObject(parentId);
 		auto temp1 = Handle(AIS_Shape)::DownCast(object1);
@@ -4729,8 +4767,8 @@ public:
 		return rett;
 	}
 
-	List<SurfInfo^>^ GetFacesInfo(ManagedObjHandle^ h1) {
-		List<SurfInfo^>^ rett = gcnew List<SurfInfo^>();
+		List<ISurfInfo^>^ GetFacesInfo(ManagedObjHandle^ h1) {
+			List<ISurfInfo^>^ rett = gcnew List<ISurfInfo^>();
 		auto hh = h1->ToObjHandle();
 		const auto object1 = impl->findObject(hh);
 		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
@@ -5639,3 +5677,4 @@ private:
 	NCollection_Haft<Handle(OpenGl_GraphicDriver)> myGraphicDriver;
 };
 
+};

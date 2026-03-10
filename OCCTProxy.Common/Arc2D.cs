@@ -1,7 +1,8 @@
-﻿using System;
+﻿using OCCTProxy.Common;
+using System;
 using System.Runtime.InteropServices;
 
-namespace Cascade.Common
+namespace OCCTProxy.Common
 {
     public class Arc2d : BlueprintItem
     {

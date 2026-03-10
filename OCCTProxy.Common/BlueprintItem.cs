@@ -1,6 +1,7 @@
-﻿using System;
+﻿using OCCTProxy.Common;
+using System;
 
-namespace Cascade.Common
+namespace OCCTProxy.Common
 {
     public abstract class BlueprintItem
     {

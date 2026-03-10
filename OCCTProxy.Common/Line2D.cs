@@ -1,4 +1,4 @@
-﻿namespace Cascade.Common
+﻿namespace OCCTProxy.Common
 {
     public class Line2D : BlueprintItem
     {

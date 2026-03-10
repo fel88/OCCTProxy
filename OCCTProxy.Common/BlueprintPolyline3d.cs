@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Cascade.Common
+namespace OCCTProxy.Common
 {
     public class BlueprintPolyline3d : BlueprintItem3d
     {

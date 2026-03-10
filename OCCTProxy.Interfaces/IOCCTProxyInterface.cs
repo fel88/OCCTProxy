@@ -1,4 +1,5 @@
-﻿using Cascade.Common;
+﻿using OCCTProxy.Common;
+using OCCTProxy.Common.Interfaces;
 using OpenTK.Mathematics;
 using System.Numerics;
 
@@ -78,7 +79,7 @@ namespace OCCT.Interfaces
         void UpdateCurrentViewer();
         void SetTransparency(ManagedObjHandle managedObjHandle, double v);
         ManagedObjHandle MakePrismFromFace(ManagedObjHandle managedObjHandle, double height);
-        List<SurfInfo> GetFacesInfo(ManagedObjHandle managedObjHandle);
+        List<ISurfInfo> GetFacesInfo(ManagedObjHandle managedObjHandle);
         List<EdgeInfo> GetEdgesInfo(ManagedObjHandle managedObjHandle);
         List<VertInfo> GetVertsInfo(ManagedObjHandle managedObjHandle);
         void SetDefaultGradient();
@@ -113,7 +114,7 @@ namespace OCCT.Interfaces
         void SetMaterial(int v);
         void Zoom(int v1, int v2, int v3, int v4);
         EdgeInfo GetEdgeInfoPosition(ManagedObjHandle obj);
-        SurfInfo GetFaceInfo(ManagedObjHandle obj);
+        ISurfInfo GetFaceInfo(ManagedObjHandle obj);
         Vector3d? GetVertexPosition(ManagedObjHandle obj);
         void StartRotation(int x, int y);
         void Select(bool v);

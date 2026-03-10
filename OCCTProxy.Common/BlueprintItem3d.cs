@@ -1,5 +1,5 @@
 ﻿
-namespace Cascade.Common
+namespace OCCTProxy.Common
 {
     public class BlueprintItem3d
     {

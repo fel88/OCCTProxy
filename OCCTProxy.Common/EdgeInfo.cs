@@ -1,4 +1,5 @@
-﻿using OCCTProxy.Common.Interfaces;
+﻿using OCCTProxy.Common;
+using OCCTProxy.Common.Interfaces;
 using OpenTK.Mathematics;
 
 namespace OCCTProxy.Common

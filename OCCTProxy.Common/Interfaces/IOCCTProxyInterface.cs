@@ -1,16 +1,17 @@
 ﻿using OCCTProxy.Common;
-using OCCTProxy.Common.Interfaces;
 using OpenTK.Mathematics;
+using System;
+using System.Collections.Generic;
 using System.Numerics;
 
-namespace OCCT.Interfaces
+namespace OCCTProxy.Common.Interfaces
 {
     public interface IOCCTProxyInterface
     {
         bool ImGuiMouseUp(int btn, int x, int y);
         bool ImGuiMouseDown(int btn, int x, int y);
-        void runOpenTk(IntPtr wnd, IntPtr glctx);
-        bool InitViewer2(IntPtr glctx);
+        void runOpenTk(nint wnd, nint glctx);
+        bool InitViewer2(nint glctx);
         void MouseMove(int x, int y);
         void cleanup();
         void Resize(int x, int y);
@@ -43,15 +44,15 @@ namespace OCCT.Interfaces
         int? ProjectionType();
         Matrix4? OrientationMatrix();
         void ResetSelectionMode();
-        ManagedObjHandle Text2Brep(string str, double fontSize, double bevelHeight);
+        IManagedObjHandle Text2Brep(string str, double fontSize, double bevelHeight);
         void SetSelectionMode(SelectionModeEnum f);
         void TopView();
         void FrontView();
-        ManagedObjHandle GetSelectedObject();
-        List<ManagedObjHandle> GetSelectedObjects();
-        List<ManagedObjHandle> GetDetectedVertices();
-        ManagedObjHandle GetSelectedEdge();
-        ManagedObjHandle GetDetectedObject();
+        IManagedObjHandle GetSelectedObject();
+        List<IManagedObjHandle> GetSelectedObjects();
+        List<IManagedObjHandle> GetDetectedVertices();
+        IManagedObjHandle GetSelectedEdge();
+        IManagedObjHandle GetDetectedObject();
         bool IsObjectSelected();
         void ShowStats(bool status);
         void SetDisplayMode(int m);
@@ -110,7 +111,7 @@ namespace OCCT.Interfaces
         void Rotation(int x, int y);
         IManagedObjHandle MakeBox(double x, double y, double z, double w, double l, double h);
         void SetBackgroundColor(int r1, int g1, int b1, int r2, int g2, int b2);
-        bool InitViewer(IntPtr handle);
+        bool InitViewer(nint handle);
         void SetMaterial(int v);
         void Zoom(int v1, int v2, int v3, int v4);
         IEdgeInfo GetEdgeInfoPosition(IManagedObjHandle obj);

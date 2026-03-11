@@ -130,6 +130,7 @@
 
 using namespace OCCTProxy::Common;
 using namespace OCCTProxy::Common::Interfaces;
+using namespace OCCTProxy::Common::Surfaces;
 using namespace OpenTK::Mathematics;
 using namespace System::Collections::Generic;
 
@@ -197,60 +198,6 @@ public:
 
 
 
-
-public ref class CircleEdgeInfo : EdgeInfo {
-public:
-	double Radius;
-};
-
-public ref class SurfInfo : public ISurfInfo {
-public:
-	virtual property Vector3d COM;
-	virtual property Vector3d Position;
-	virtual property int BindId;
-	virtual property int AisShapeBindId;//parent
-};
-
-public ref class VertInfo :public IVertInfo {
-public:
-	virtual property Vector3d Position;
-
-	virtual property int BindId;
-	virtual property int AisShapeBindId;//parent
-};
-
-public ref class PlaneSurfInfo : SurfInfo, IPlaneSurfInfo {
-public:
-	virtual property Vector3d Normal;
-};
-
-public ref class SurfOfRevolutionInfo : SurfInfo {
-public:
-};
-
-public ref class TorusSurfInfo : SurfInfo {
-public:
-	double MajorRadius;
-	double MinorRadius;
-};
-
-public ref class ConeSurfInfo : SurfInfo {
-public:
-	double Radius1;
-	double Radius2;
-	double SemiAngle;
-};
-
-public ref class CylinderSurfInfo :SurfInfo {
-public:
-	double Radius;
-	Vector3d Axis;
-};
-
-public ref class SphereSurfInfo : SurfInfo {
-public:
-	double Radius;
-};
 
 public ref class TopObjHandle : public ITopObjHandle {
 public:
@@ -1941,13 +1888,13 @@ namespace OCCTProxy {
 	/// Proxy class encapsulating calls to OCCT C++ classes within 
 	/// C++/CLI class visible from .Net (CSharp)
 	/// </summary>
-	public ref class OCCTProxy
+	public ref class OCCTProxy : public IOCCTProxyInterface
 	{
 
 
 	public:
 
-		void runOpenTk(IntPtr wnd, IntPtr glctx)
+		virtual void runOpenTk(IntPtr wnd, IntPtr glctx)
 		{
 			gview->initWindow(800, 600, wnd.ToPointer(), "OCCT IMGUI");
 
@@ -1970,52 +1917,52 @@ namespace OCCTProxy {
 			//mainloop();
 			//cleanup();
 		}
-		void MouseMove(int x, int y) {
+		virtual void MouseMove(int x, int y) {
 			gview->MouseMove(x, y);
 		}
-		void Resize(int x, int y) {
+		virtual void Resize(int x, int y) {
 			gview->onResize(x, y);
 		}
 
-		void ShowStats(bool status) {
+		virtual void ShowStats(bool status) {
 			gview->ShowStats(status);
 		}
 
-		void MouseDown(int btn, int x, int y) {
+		virtual void MouseDown(int btn, int x, int y) {
 			gview->MouseDown(btn, x, y);
 		}
 
-		void MouseUp(int btn, int x, int y) {
+		virtual void MouseUp(int btn, int x, int y) {
 			gview->MouseUp(btn, x, y);
 		}
 
-		bool ImGuiMouseUp(int btn, int x, int y) {
+		virtual bool ImGuiMouseUp(int btn, int x, int y) {
 			return gview->ImGuiMouseUp(btn, x, y);
 		}
 
-		bool ImGuiMouseDown(int btn, int x, int y) {
+		virtual bool ImGuiMouseDown(int btn, int x, int y) {
 			return gview->ImGuiMouseDown(btn, x, y);
 		}
 
-		void MouseScroll(int x, int y, int offset) {
+		virtual void MouseScroll(int x, int y, int offset) {
 			gview->MouseScroll(x, y, offset);
 		}
-		void iterate() {
+		virtual void iterate() {
 			gview->iterate();
 		}
-		void StartRenderGui() {
+		virtual void StartRenderGui() {
 			gview->StartRenderGui();
 		}
 
-		void EndRenderGui() {
+		virtual void EndRenderGui() {
 			gview->EndRenderGui();
 		}
 
-		void ShowDemoWindow() {
+		virtual void ShowDemoWindow() {
 			gview->ShowDemoWindow();
 		}
 
-		void Begin(System::String^ str) {
+		virtual void Begin(System::String^ str) {
 
 			// Convert to std::string
 			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
@@ -2025,7 +1972,7 @@ namespace OCCTProxy {
 			gview->Begin(cstr_const);
 		}
 
-		void Text(System::String^ str) {
+		virtual void Text(System::String^ str) {
 			// Convert to std::string
 			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
 
@@ -2034,7 +1981,7 @@ namespace OCCTProxy {
 			gview->Text(cstr_const);
 		}
 
-		bool Button(System::String^ str) {
+		virtual bool Button(System::String^ str) {
 			// Convert to std::string
 			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
 
@@ -2043,7 +1990,7 @@ namespace OCCTProxy {
 			return gview->Button(cstr_const);
 		}
 
-		bool Checkbox(System::String^ str, bool state) {
+		virtual bool Checkbox(System::String^ str, bool state) {
 			// Convert to std::string
 			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
 
@@ -2051,20 +1998,20 @@ namespace OCCTProxy {
 			const char* cstr_const = nativeString.c_str();
 			return gview->Checkbox(cstr_const, state);
 		}
-		void SetNextWindowSizeConstraints(int minx, int miny, int maxx, int maxy) {
+		virtual void SetNextWindowSizeConstraints(int minx, int miny, int maxx, int maxy) {
 
 			return gview->SetNextWindowSizeConstraints(minx, miny, maxx, maxy);
 		}
 
-		void End() {
+		virtual void End() {
 			gview->End();
 		}
-		void cleanup()
+		virtual void cleanup()
 		{
 			gview->cleanup();
 
 		}
-		void initDemoScene()
+		virtual void initDemoScene()
 		{
 			if (myAISContext().IsNull())
 			{
@@ -2094,7 +2041,7 @@ namespace OCCTProxy {
 			Message::DefaultMessenger()->Send(TCollection_AsciiString("OpenGL info:\n") + aGlInfo, Message_Info);
 		}
 
-		void initGui()
+		virtual void initGui()
 		{
 			IMGUI_CHECKVERSION();
 			ImGui::CreateContext();
@@ -2119,7 +2066,7 @@ namespace OCCTProxy {
 		///Initialize a viewer
 		/// </summary>
 		/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
-		bool InitViewer(System::IntPtr theWnd)
+		virtual bool InitViewer(System::IntPtr theWnd)
 		{
 			try
 			{
@@ -2189,7 +2136,7 @@ namespace OCCTProxy {
 		///Initialize a viewer
 		/// </summary>
 		/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
-		bool InitViewer2(System::IntPtr glctx)
+		virtual bool InitViewer2(System::IntPtr glctx)
 		{
 			try
 			{
@@ -2236,14 +2183,14 @@ namespace OCCTProxy {
 			return true;
 		}
 
-		void SetDefaultGradient() {
+		virtual void SetDefaultGradient() {
 			myView()->SetBgGradientColors(
 				Quantity_Color(0xAD / (float)0xFF - 0.2f, 0xD8 / (float)0xFF - 0.2f, 0xE6 / (float)0xFF, Quantity_TOC_RGB),
 				Quantity_Color(0xF0 / (float)0xFF - 0.3f, 0xF8 / (float)0xFF - 0.3f, 0xFF / (float)0xFF - 0.3f, Quantity_TOC_RGB),
 				Aspect_GFM_DIAG2);
 		}
 
-		ManagedObjHandle^ GetSelectedObject() {
+		virtual IManagedObjHandle^ GetSelectedObject() {
 			auto ret = impl->getSelectedObject(myAISContext().get());
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
@@ -2252,7 +2199,7 @@ namespace OCCTProxy {
 
 		}
 
-		int GetTotalShapes() {
+		virtual int GetTotalShapes() {
 
 			Handle(AIS_InteractiveContext) theCtx = myAISContext();
 
@@ -2272,9 +2219,10 @@ namespace OCCTProxy {
 			return counter;
 
 		}
-		List<ManagedObjHandle^>^ GetSelectedObjects() {
+
+		virtual List<IManagedObjHandle^>^ GetSelectedObjects() {
 			auto objs = impl->getSelectedObjectsList();
-			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			List<IManagedObjHandle^>^ ret = gcnew List<IManagedObjHandle^>();
 			for (size_t i = 0; i < objs.size(); i++)
 			{
 				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
@@ -2284,7 +2232,7 @@ namespace OCCTProxy {
 			return ret;
 		}
 
-		List<ManagedObjHandle^>^ GetDetectedObjects() {
+		virtual List<ManagedObjHandle^>^ GetDetectedObjects() {
 			auto objs = impl->getDetectedObjectsList();
 			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
 			for (size_t i = 0; i < objs.size(); i++)
@@ -2296,7 +2244,7 @@ namespace OCCTProxy {
 			return ret;
 		}
 
-		ManagedObjHandle^ GetSelectedEdge() {
+		virtual IManagedObjHandle^ GetSelectedEdge() {
 			auto ret = impl->getSelectedEdge();
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
@@ -2304,11 +2252,11 @@ namespace OCCTProxy {
 			return hh;
 		}
 
-		List<ManagedObjHandle^>^ GetSelectedEdges() {
+		virtual List<IManagedObjHandle^>^ GetSelectedEdges() {
 
 			std::vector<ObjHandle> edges;
 			impl->GetSelectedEdges(edges);
-			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			List<IManagedObjHandle^>^ ret = gcnew List<IManagedObjHandle^>();
 			for (size_t i = 0; i < edges.size(); i++)
 			{
 				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
@@ -2319,11 +2267,12 @@ namespace OCCTProxy {
 
 			return ret;
 		}
-		List<ManagedObjHandle^>^ GetDetectedVertices() {
+
+		virtual List<IManagedObjHandle^>^ GetDetectedVertices() {
 
 			std::vector<ObjHandle> verts;
 			impl->GetDetectedVertices(verts);
-			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			List<IManagedObjHandle^>^ ret = gcnew List<IManagedObjHandle^>();
 			for (size_t i = 0; i < verts.size(); i++)
 			{
 				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
@@ -2334,14 +2283,15 @@ namespace OCCTProxy {
 
 			return ret;
 		}
-		ManagedObjHandle^ GetDetectedObject() {
+
+		virtual IManagedObjHandle^ GetDetectedObject() {
 			auto ret = impl->getDetectedObject(myAISContext().get());
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 			hh->FromObjHandle(ret);
 			return hh;
 		}
 
-		void SetDefaultDrawerParams() {
+		virtual void SetDefaultDrawerParams() {
 			auto ais = myAISContext();
 			auto drawer = ais->DefaultDrawer();
 			drawer->SetFaceBoundaryDraw(true);
@@ -2419,7 +2369,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Redraw view
 		/// </summary>
-		void RedrawView(void)
+		virtual void RedrawView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2430,7 +2380,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Update view
 		/// </summary>
-		void UpdateView(void)
+		virtual void UpdateView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2489,7 +2439,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Set Zoom
 		/// </summary>
-		void Zoom(int theX1, int theY1, int theX2, int theY2)
+		virtual void Zoom(int theX1, int theY1, int theX2, int theY2)
 		{
 			if (!myView().IsNull())
 			{
@@ -2498,7 +2448,7 @@ namespace OCCTProxy {
 		}
 
 
-		void ZoomAtPoint(int theX1, int theY1, int theX2, int theY2)
+		virtual void ZoomAtPoint(int theX1, int theY1, int theX2, int theY2)
 		{
 			if (!myView().IsNull())
 			{
@@ -2506,7 +2456,7 @@ namespace OCCTProxy {
 			}
 		}
 
-		void StartZoomAtPoint(int theX1, int theY1)
+		virtual void StartZoomAtPoint(int theX1, int theY1)
 		{
 			if (!myView().IsNull())
 			{
@@ -2517,7 +2467,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Set Pan
 		/// </summary>
-		void Pan(int theX, int theY)
+		virtual void Pan(int theX, int theY)
 		{
 			if (!myView().IsNull())
 			{
@@ -2528,7 +2478,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Rotation
 		/// </summary>
-		void Rotation(int theX, int theY)
+		virtual void Rotation(int theX, int theY)
 		{
 			if (!myView().IsNull())
 			{
@@ -2539,7 +2489,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Start rotation
 		/// </summary>
-		void StartRotation(int theX, int theY)
+		virtual void StartRotation(int theX, int theY)
 		{
 			if (!myView().IsNull())
 			{
@@ -2547,7 +2497,7 @@ namespace OCCTProxy {
 			}
 		}
 
-		Nullable<Vector3d> GetGravityPoint()
+		virtual Nullable<Vector3d> GetGravityPoint()
 		{
 			if (!myView().IsNull())
 			{
@@ -2561,7 +2511,7 @@ namespace OCCTProxy {
 			return {};
 		}
 
-		Nullable<float> ProjectionFOVy()
+		virtual Nullable<float> ProjectionFOVy()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2569,7 +2519,7 @@ namespace OCCTProxy {
 			return myView()->Camera()->FOVy();
 		}
 
-		Nullable<float> ProjectionAspect()
+		virtual Nullable<float> ProjectionAspect()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2577,7 +2527,7 @@ namespace OCCTProxy {
 			return myView()->Camera()->Aspect();
 		}
 
-		Nullable<float> ProjectionZNear()
+		virtual Nullable<float> ProjectionZNear()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2585,7 +2535,7 @@ namespace OCCTProxy {
 			return myView()->Camera()->ZNear();
 		}
 
-		Nullable<float> ProjectionZFar()
+		virtual Nullable<float> ProjectionZFar()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2593,7 +2543,7 @@ namespace OCCTProxy {
 			return myView()->Camera()->ZFar();
 		}
 
-		Nullable<float> ProjectionScale()
+		virtual Nullable<float> ProjectionScale()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2601,7 +2551,7 @@ namespace OCCTProxy {
 			return (int)myView()->Camera()->Scale();
 		}
 
-		Nullable<int> ProjectionType()
+		virtual Nullable<int> ProjectionType()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2616,7 +2566,7 @@ namespace OCCTProxy {
 		Standard_Real aZNear = aCamera->ZNear();
 		Standard_Real aZFar = aCamera->ZFar();*/
 
-		Nullable<Matrix4> ProjectionMatrix()
+		virtual Nullable<Matrix4> ProjectionMatrix()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2635,7 +2585,7 @@ namespace OCCTProxy {
 			return v;
 		}
 
-		Nullable<Matrix4> OrientationMatrix()
+		virtual Nullable<Matrix4> OrientationMatrix()
 		{
 			if (myView().IsNull())
 				return {};
@@ -2654,7 +2604,7 @@ namespace OCCTProxy {
 			return v;
 		}
 
-		Nullable<Vector3d> GetEye()
+		virtual Nullable<Vector3d> GetEye()
 		{
 			if (!myView().IsNull())
 			{
@@ -2669,7 +2619,7 @@ namespace OCCTProxy {
 			return {};
 		}
 
-		Nullable<Vector3d>  GetCenter()
+		virtual Nullable<Vector3d>  GetCenter()
 		{
 			if (!myView().IsNull())
 			{
@@ -2685,7 +2635,7 @@ namespace OCCTProxy {
 			return {};
 		}
 
-		Nullable<Vector3d>  GetUp()
+		virtual Nullable<Vector3d>  GetUp()
 		{
 			if (!myView().IsNull())
 			{
@@ -2703,7 +2653,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Select by rectangle
 		/// </summary>
-		void Select(int theX1, int theY1, int theX2, int theY2)
+		virtual void Select(int theX1, int theY1, int theX2, int theY2)
 		{
 			if (!myAISContext().IsNull())
 			{
@@ -2717,7 +2667,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Select by click
 		/// </summary>
-		void Select(bool xorSelect)
+		virtual void Select(bool xorSelect)
 		{
 			if (myAISContext().IsNull())
 				return;
@@ -2734,7 +2684,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Move view
 		/// </summary>
-		void MoveTo(int theX, int theY)
+		virtual void MoveTo(int theX, int theY)
 		{
 			if ((!myAISContext().IsNull()) && (!myView().IsNull()))
 			{
@@ -2820,7 +2770,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Update current viewer
 		/// </summary>
-		void UpdateCurrentViewer(void)
+		virtual void UpdateCurrentViewer(void)
 		{
 			if (!myAISContext().IsNull())
 			{
@@ -2831,7 +2781,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Front side
 		/// </summary>
-		void FrontView(void)
+		virtual void FrontView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2842,7 +2792,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Top side
 		/// </summary>
-		void TopView(void)
+		virtual void TopView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2853,7 +2803,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Left side
 		/// </summary>
-		void LeftView(void)
+		virtual void LeftView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2864,7 +2814,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Back side
 		/// </summary>
-		void BackView(void)
+		virtual void BackView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2875,7 +2825,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Right side
 		/// </summary>
-		void RightView(void)
+		virtual void RightView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2886,7 +2836,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Bottom side
 		/// </summary>
-		void BottomView(void)
+		virtual void BottomView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2897,7 +2847,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Axo side
 		/// </summary>
-		void AxoView(void)
+		virtual void AxoView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2923,7 +2873,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Zoom in all view
 		/// </summary>
-		void ZoomAllView(void)
+		virtual void ZoomAllView(void)
 		{
 			if (!myView().IsNull())
 			{
@@ -2943,7 +2893,7 @@ namespace OCCTProxy {
 			}
 		}
 
-		void ShowCube() {
+		virtual void ShowCube() {
 			auto cube = new AIS_ViewCube();
 			cube->SetDrawAxes(true);
 			cube->SetSize(40);
@@ -2958,7 +2908,8 @@ namespace OCCTProxy {
 
 			myAISContext()->Display(cube, false);
 		}
-		void ActivateGrid(bool en) {
+
+		virtual void ActivateGrid(bool en) {
 			if (en)
 				myViewer()->ActivateGrid(Aspect_GT_Rectangular, Aspect_GDM_Lines);
 			else
@@ -2968,7 +2919,7 @@ namespace OCCTProxy {
 		///Set display mode of objects
 		/// </summary>
 		/// <param name="theMode">Set current mode</param>
-		void SetDisplayMode(int theMode)
+		virtual void SetDisplayMode(int theMode)
 		{
 			if (myAISContext().IsNull())
 			{
@@ -3002,7 +2953,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Set color
 		/// </summary>
-		void SetColor(int theR, int theG, int theB)
+		virtual void SetColor(int theR, int theG, int theB)
 		{
 			if (myAISContext().IsNull())
 			{
@@ -3070,7 +3021,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Get object color blue
 		/// </summary>
-		int GetObjColB(void)
+		virtual int GetObjColB(void)
 		{
 			int aRed, aGreen, aBlue;
 			ObjectColor(aRed, aGreen, aBlue);
@@ -3080,7 +3031,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Set background color R/G/B
 		/// </summary>
-		void SetBackgroundColor(int theRed, int theGreen, int theBlue)
+		virtual void SetBackgroundColor(int theRed, int theGreen, int theBlue)
 		{
 			if (!myView().IsNull())
 			{
@@ -3088,7 +3039,7 @@ namespace OCCTProxy {
 			}
 		}
 
-		void SetBackgroundColor(int red1, int green1, int blue1, int red2, int green2, int blue2) {
+		virtual void SetBackgroundColor(int red1, int green1, int blue1, int red2, int green2, int blue2) {
 			myView()->SetBgGradientColors(
 				Quantity_Color(red1 / 255., green1 / 255., blue1 / 255., Quantity_TOC_RGB),
 				Quantity_Color(red2 / 255., green2 / 255., blue2 / 255., Quantity_TOC_RGB),
@@ -3120,7 +3071,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///set material
 		/// </summary>
-		void SetMaterial(int theMaterial)
+		virtual void SetMaterial(int theMaterial)
 		{
 			if (myAISContext().IsNull())
 			{
@@ -3136,7 +3087,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///set transparency
 		/// </summary>
-		void SetTransparency(IManagedObjHandle^ h, double theTrans)
+		virtual void SetTransparency(IManagedObjHandle^ h, double theTrans)
 		{
 			if (myAISContext().IsNull())
 				return;
@@ -3145,7 +3096,7 @@ namespace OCCTProxy {
 			myAISContext()->SetTransparency(o, theTrans, AutoViewerUpdate);
 		}
 
-		void SetAutoViewerUpdate(bool v)
+		virtual void SetAutoViewerUpdate(bool v)
 		{
 			AutoViewerUpdate = v;
 		}
@@ -3153,7 +3104,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///set color
 		/// </summary>
-		void SetColor(IManagedObjHandle^ h, int red, int green, int blue)
+		virtual void SetColor(IManagedObjHandle^ h, int red, int green, int blue)
 		{
 			if (myAISContext().IsNull())
 				return;
@@ -3182,7 +3133,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Return true if object is selected
 		/// </summary>
-		bool IsObjectSelected(void)
+		virtual bool IsObjectSelected(void)
 		{
 			if (myAISContext().IsNull())
 			{
@@ -3310,7 +3261,7 @@ namespace OCCTProxy {
 		}
 		//#include <msclr/marshal_cppstd.h>
 
-		List<IManagedObjHandle^>^ ImportStep(System::String^ str)
+		virtual List<IManagedObjHandle^>^ ImportStep(System::String^ str)
 		{
 			const TCollection_AsciiString aFilename = toAsciiString(str);
 			return ImportStep(aFilename);
@@ -3318,7 +3269,7 @@ namespace OCCTProxy {
 
 
 
-		List<IManagedObjHandle^>^ ImportStep(System::String^ name, List<System::Byte>^ bts)
+		virtual List<IManagedObjHandle^>^ ImportStep(System::String^ name, List<System::Byte>^ bts)
 		{
 			auto buf = new uint8_t[bts->Count];
 			for (int i = 0; i < bts->Count; i++) {
@@ -3337,7 +3288,7 @@ namespace OCCTProxy {
 			return ImportStep(aFilename, s);
 		}
 
-		List<IManagedObjHandle^>^ ImportIges(System::String^ str)
+		virtual List<IManagedObjHandle^>^ ImportIges(System::String^ str)
 		{
 			const TCollection_AsciiString aFilename = toAsciiString(str);
 			return ImportIges(aFilename);
@@ -3499,13 +3450,13 @@ namespace OCCTProxy {
 			return BRepTools::Write(anIS->Shape(), theFileName.ToCString()) != Standard_False;
 		}
 
-		bool ExportStep(System::String^ str)
+		virtual bool ExportStep(System::String^ str)
 		{
 			const TCollection_AsciiString aFilename = toAsciiString(str);
 			return ExportStep(aFilename);
 		}
 
-		bool ExportStep(ITopObjHandle^ h, System::String^ str)
+		virtual bool ExportStep(ITopObjHandle^ h, System::String^ str)
 		{
 			const TCollection_AsciiString aFilename = toAsciiString(str);
 			return ExportStep(h, aFilename);
@@ -3543,7 +3494,7 @@ namespace OCCTProxy {
 		///Export Step file
 		/// </summary>
 		/// <param name="theFileName">Name of export file</param>
-		List<System::Byte>^ ExportStepStream(ITopObjHandle^ h)
+		virtual virtual List<System::Byte>^ ExportStepStream(ITopObjHandle^ h)
 		{
 			STEPControl_StepModelType aType = STEPControl_AsIs;
 			IFSelect_ReturnStatus aStatus;
@@ -3577,7 +3528,7 @@ namespace OCCTProxy {
 
 
 
-		ManagedObjHandle^ Text2Brep(System::String^ str, double aFontHeight, double anExtrusion) {
+		virtual IManagedObjHandle^ Text2Brep(System::String^ str, double aFontHeight, double anExtrusion) {
 			const auto aText = toNString(str);
 			// text2brep
 			//const double aFontHeight = 20.0;
@@ -3725,7 +3676,7 @@ namespace OCCTProxy {
 		}
 
 
-		void ResetSelectionMode() {
+		virtual void ResetSelectionMode() {
 			Handle(AIS_InteractiveContext) theCtx = myAISContext();
 
 			AIS_ListOfInteractive aDispList;
@@ -3742,7 +3693,7 @@ namespace OCCTProxy {
 			//myAISContext()->Deactivate();
 		}
 
-		void SetSelectionMode(SelectionModeEnum t) {
+		virtual void SetSelectionMode(SelectionModeEnum t) {
 			if (t == SelectionModeEnum::None)
 				return;
 			Handle(AIS_InteractiveContext) theCtx = myAISContext();
@@ -3763,21 +3714,21 @@ namespace OCCTProxy {
 		//currentMode=t;
 		}
 
-		void Erase(IManagedObjHandle^ h, bool updateViewer) {
+		virtual void Erase(IManagedObjHandle^ h, bool updateViewer) {
 			auto o = impl->findObject(h->BindId);
 			myAISContext()->Erase(o, updateViewer);
 		}
 
-		void Erase(IManagedObjHandle^ h) {
+		virtual void Erase(IManagedObjHandle^ h) {
 			Erase(h, true);
 		}
 
-		void Remove(IManagedObjHandle^ h) {
+		virtual void Remove(IManagedObjHandle^ h) {
 			auto o = impl->findObject(h->BindId);
 			myAISContext()->Remove(o, true);
 		}
 
-		void Display(IManagedObjHandle^ h, bool wireframe) {
+		virtual void Display(IManagedObjHandle^ h, bool wireframe) {
 			auto o = impl->findObject(h->BindId);
 			myAISContext()->Display(o, false);
 			myAISContext()->SetDisplayMode(o, wireframe ? AIS_WireFrame : AIS_Shaded, true);
@@ -3810,7 +3761,7 @@ namespace OCCTProxy {
 
 
 
-		List<double>^ GetShapeMatrixValues(IManagedObjHandle^ h) {
+		virtual List<double>^ GetShapeMatrixValues(IManagedObjHandle^ h) {
 			List<double>^ ret = gcnew List<double>();
 			auto p = impl->findObject(h->BindId);
 			Handle(AIS_Shape) shapeObject = Handle(AIS_Shape)::DownCast(p);
@@ -3840,7 +3791,7 @@ namespace OCCTProxy {
 
 
 
-		List<double>^ GetObjectMatrixValues(IManagedObjHandle^ h) {
+		virtual List<double>^ GetObjectMatrixValues(IManagedObjHandle^ h) {
 			List<double>^ ret = gcnew List<double>();
 			auto p = impl->findObject(h->BindId);
 			auto trans = p->Transformation();
@@ -3854,12 +3805,12 @@ namespace OCCTProxy {
 			return ret;
 		}
 
-		void MoveObject(IManagedObjHandle^ h, double x, double y, double z, bool rel)
+		virtual void MoveObject(IManagedObjHandle^ h, double x, double y, double z, bool rel)
 		{
 			MoveObject(h->AisShapeBindId, x, y, z, rel);
 		}
 
-		void MoveObject(ITopObjHandle^ h, double x, double y, double z, bool rel)
+		virtual void MoveObject(ITopObjHandle^ h, double x, double y, double z, bool rel)
 		{
 			MoveObject(h->BindId, x, y, z, rel);
 		}
@@ -3878,9 +3829,7 @@ namespace OCCTProxy {
 			myAISContext()->SetLocation(o, p);
 		}
 
-
-
-		void SetMatrixValues(IManagedObjHandle^ h, List<double>^ m)
+		virtual void SetMatrixValues(IManagedObjHandle^ h, List<double>^ m)
 		{
 			auto o = impl->findObject(h->BindId);
 			gp_Trsf tr;
@@ -3908,7 +3857,7 @@ namespace OCCTProxy {
 
 		}
 
-		void RotateObject(IManagedObjHandle^ h, double x, double y, double z, double ang, bool rel)
+		virtual void RotateObject(IManagedObjHandle^ h, double x, double y, double z, double ang, bool rel)
 		{
 			auto o = impl->findObject(h->BindId);
 			gp_Trsf tr;
@@ -3925,7 +3874,7 @@ namespace OCCTProxy {
 			myAISContext()->SetLocation(o, p);
 		}
 
-		IManagedObjHandle^ MirrorObject(IManagedObjHandle^ h, Vector3d dir, Vector3d pnt, bool axis2, bool rel)
+		virtual IManagedObjHandle^ MirrorObject(IManagedObjHandle^ h, Vector3d dir, Vector3d pnt, bool axis2, bool rel)
 		{
 			ObjHandle oh = ObjHandle(h);
 			const auto object1 = impl->findObject(oh);
@@ -3963,7 +3912,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		List<List<Vector3d>^>^ IteratePoly(ITopObjHandle^ h, bool useLocalTransform, bool useWholeShapeTransform) {
+		virtual List<List<Vector3d>^>^ IteratePoly(ITopObjHandle^ h, bool useLocalTransform, bool useWholeShapeTransform) {
 
 			List<List<Vector3d>^>^ ret = gcnew List<List<Vector3d>^>();
 
@@ -3992,7 +3941,7 @@ namespace OCCTProxy {
 			return ret;
 		}
 
-		IManagedObjHandle^ MakeDiff(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
+		virtual IManagedObjHandle^ MakeDiff(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
 			ObjHandle h1 = ObjHandle(mh1);
 			ObjHandle h2(mh2);
 			const auto ret = impl->MakeBoolDiff(h1, h2);
@@ -4008,7 +3957,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		IManagedObjHandle^ MakeFuse(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
+		virtual IManagedObjHandle^ MakeFuse(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
 			ObjHandle h1 = ObjHandle(mh1);
 			ObjHandle h2 = ObjHandle(mh2);
 			const auto ret = impl->MakeBoolFuse(h1, h2);
@@ -4026,7 +3975,7 @@ namespace OCCTProxy {
 
 
 
-		IManagedObjHandle^ Clone(IManagedObjHandle^ m) {
+		virtual IManagedObjHandle^ Clone(IManagedObjHandle^ m) {
 			BRepBuilderAPI_Copy copy;
 			ObjHandle h = ObjHandle(m);
 
@@ -4049,7 +3998,7 @@ namespace OCCTProxy {
 
 		}
 
-		IManagedObjHandle^ MakePrism(IManagedObjHandle^ m, double height) {
+		virtual IManagedObjHandle^ MakePrism(IManagedObjHandle^ m, double height) {
 			ObjHandle h = ObjHandle(m);
 			BRepBuilderAPI_MakeFace bface;
 			auto			 object1 = impl->findObject(h);
@@ -4112,12 +4061,12 @@ namespace OCCTProxy {
 			//myAISContext()->Display(new AIS_Shape(ret), true);
 		}
 
-		IManagedObjHandle^ MakePrismFromFace(IManagedObjHandle^ m, double height)
+		virtual IManagedObjHandle^ MakePrismFromFace(IManagedObjHandle^ m, double height)
 		{
 			return MakePrismFromFace(m->AisShapeBindId, m, height);
 		}
 
-		IManagedObjHandle^ MakePrismFromFace(int parentId, IManagedObjHandle^ m, double height) {
+		virtual IManagedObjHandle^ MakePrismFromFace(int parentId, IManagedObjHandle^ m, double height) {
 			ObjHandle h = ObjHandle(m);
 			BRepBuilderAPI_MakeFace bface;
 			const auto object1 = impl->findObject(parentId);
@@ -4203,7 +4152,7 @@ namespace OCCTProxy {
 			//myAISContext()->Display(new AIS_Shape(ret), true);
 		}
 
-		IManagedObjHandle^ MakeCommon(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
+		virtual IManagedObjHandle^ MakeCommon(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
 			ObjHandle h1 = ObjHandle(mh1);
 			ObjHandle h2 = ObjHandle(mh2);
 			const auto ret = impl->MakeBoolCommon(h1, h2);
@@ -4246,7 +4195,7 @@ namespace OCCTProxy {
 			myAISContext()->Display(anAisFusedShape, true);
 		}
 
-		IManagedObjHandle^ AddWireDraft(double height) {
+		virtual IManagedObjHandle^ AddWireDraft(double height) {
 			BRepBuilderAPI_MakeFace bface;
 
 			BRepBuilderAPI_MakeWire wire;
@@ -4289,7 +4238,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		Nullable<Vector3d> GetVertexPosition(IManagedObjHandle^ h1)
+		virtual Nullable<Vector3d> GetVertexPosition(IManagedObjHandle^ h1)
 		{
 			return GetVertexPosition(h1->AisShapeBindId, h1);
 		}
@@ -4331,13 +4280,13 @@ namespace OCCTProxy {
 			return {};
 		}
 
-		IEdgeInfo^ GetEdgeInfoPosition(IManagedObjHandle^ h1)
+		virtual IEdgeInfo^ GetEdgeInfoPosition(IManagedObjHandle^ h1)
 		{
 			ManagedObjHandle^ hh = safe_cast<ManagedObjHandle^>(h1);
 			return GetEdgeInfoPosition(h1->AisShapeBindId, hh);
 		}
 
-		IEdgeInfo^ GetEdgeInfoPosition(int parentId, IManagedObjHandle^ h1)
+		virtual IEdgeInfo^ GetEdgeInfoPosition(int parentId, IManagedObjHandle^ h1)
 		{
 			auto hh = ObjHandle(h1);
 			const auto object1 = impl->findObject(parentId);
@@ -4591,7 +4540,7 @@ namespace OCCTProxy {
 
 
 
-		ISurfInfo^ GetFaceInfo(IManagedObjHandle^ h1) {
+		virtual ISurfInfo^ GetFaceInfo(IManagedObjHandle^ h1) {
 			return GetFaceInfo(h1->AisShapeBindId, h1);
 
 		}
@@ -4690,7 +4639,7 @@ namespace OCCTProxy {
 			return nullptr;
 		}
 
-		List<IVertInfo^>^ GetVertsInfo(IManagedObjHandle^ h1) {
+		virtual List<IVertInfo^>^ GetVertsInfo(IManagedObjHandle^ h1) {
 			List<IVertInfo^>^ rett = gcnew List<IVertInfo^>();
 			auto hh = ObjHandle(h1);
 			const auto object1 = impl->findObject(hh);
@@ -4723,7 +4672,7 @@ namespace OCCTProxy {
 			return rett;
 		}
 
-		List<ISurfInfo^>^ GetFacesInfo(IManagedObjHandle^ h1) {
+		virtual List<ISurfInfo^>^ GetFacesInfo(IManagedObjHandle^ h1) {
 			List<ISurfInfo^>^ rett = gcnew List<ISurfInfo^>();
 			auto hh = ObjHandle(h1);
 			const auto object1 = impl->findObject(hh);
@@ -4782,7 +4731,7 @@ namespace OCCTProxy {
 			return rett;
 		}
 
-		List<IEdgeInfo^>^ GetEdgesInfo(IManagedObjHandle^ h1) {
+		virtual List<IEdgeInfo^>^ GetEdgesInfo(IManagedObjHandle^ h1) {
 			ManagedObjHandle^ hh = safe_cast<ManagedObjHandle^>(h1);
 			return GetEdgesInfo(hh);
 		}
@@ -4868,7 +4817,7 @@ namespace OCCTProxy {
 			return rett;
 		}
 
-		IManagedObjHandle^ MakeChamfer(IManagedObjHandle^ h1, double s)
+		virtual IManagedObjHandle^ MakeChamfer(IManagedObjHandle^ h1, double s)
 		{
 			auto hh = ObjHandle(h1);
 			const auto object1 = impl->findObject(hh);
@@ -4922,11 +4871,11 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		IManagedObjHandle^ Sphere(double x1, double y1, double z1, double size) {
+		virtual IManagedObjHandle^ Sphere(double x1, double y1, double z1, double size) {
 			return Sphere(gp_Pnt(x1, y1, z1), size);
 		}
 
-		IManagedObjHandle^ Sphere(gp_Pnt center, double radius) {
+		virtual IManagedObjHandle^ Sphere(gp_Pnt center, double radius) {
 
 			auto	sphere = BRepPrimAPI_MakeSphere(center, radius).Shape();
 
@@ -4939,11 +4888,11 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		IManagedObjHandle^ Pipe(double x1, double y1, double z1, double x2, double y2, double z2, double size) {
+		virtual IManagedObjHandle^ Pipe(double x1, double y1, double z1, double x2, double y2, double z2, double size) {
 			return Pipe(gp_Pnt(x1, y1, z1), gp_Pnt(x2, y2, z2), size);
 		}
 
-		IManagedObjHandle^ Pipe(gp_Pnt point1, gp_Pnt point2, double size) {
+		virtual IManagedObjHandle^ Pipe(gp_Pnt point1, gp_Pnt point2, double size) {
 
 
 			auto	makeWire = BRepBuilderAPI_MakeWire();
@@ -4968,7 +4917,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		IManagedObjHandle^ MakePipe(IManagedObjHandle^ h1, double s)
+		virtual IManagedObjHandle^ MakePipe(IManagedObjHandle^ h1, double s)
 		{
 			auto hh = ObjHandle(h1);
 			const auto object1 = impl->findObject(hh);
@@ -5033,7 +4982,7 @@ namespace OCCTProxy {
 			return nullptr;
 		}
 
-		IManagedObjHandle^ HelixWire(double radius, double radius2, double height, double turns) {
+		virtual IManagedObjHandle^ HelixWire(double radius, double radius2, double height, double turns) {
 
 			std::vector<gp_Pnt> vec;
 			auto ang = turns * M_PI * 2;
@@ -5083,7 +5032,7 @@ namespace OCCTProxy {
 			return hhh2;//	myContext->Display(new AIS_Shape(ts)
 		}
 
-		IManagedObjHandle^ MakeFillet2d(IManagedObjHandle^ h1, double s)
+		virtual IManagedObjHandle^ MakeFillet2d(IManagedObjHandle^ h1, double s)
 		{
 			auto hh = ObjHandle(h1);
 			const auto object1 = impl->findObject(hh);
@@ -5152,7 +5101,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		ManagedObjHandle^ MakeFillet2d_new(ManagedObjHandle^ h1, double s)
+		virtual ManagedObjHandle^ MakeFillet2d_new(ManagedObjHandle^ h1, double s)
 		{
 			//not tested
 			auto hh = h1->ToObjHandle();
@@ -5263,7 +5212,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		IManagedObjHandle^ MakeFillet(IManagedObjHandle^ h1, double s)
+		virtual IManagedObjHandle^ MakeFillet(IManagedObjHandle^ h1, double s)
 		{
 			auto hh = ObjHandle(h1);
 			//const auto* object1 = impl->getObject(hh);
@@ -5320,7 +5269,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		IManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l) {
+		virtual IManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l) {
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 			//myAISContext()->SetDisplayMode(prs, AIS_Shaded, false);
@@ -5339,7 +5288,7 @@ namespace OCCTProxy {
 			return hh;
 		}
 
-		IManagedObjHandle^ MakeCylinder(double r, double h) {
+		virtual IManagedObjHandle^ MakeCylinder(double r, double h) {
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 
@@ -5354,7 +5303,7 @@ namespace OCCTProxy {
 			return hh;
 		}
 
-		IManagedObjHandle^ MakeSphere(double r) {
+		virtual IManagedObjHandle^ MakeSphere(double r) {
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 
@@ -5370,7 +5319,7 @@ namespace OCCTProxy {
 		}
 
 
-		IManagedObjHandle^ MakeCone(double r1, double r2, double h) {
+		virtual IManagedObjHandle^ MakeCone(double r1, double r2, double h) {
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 
@@ -5392,7 +5341,8 @@ namespace OCCTProxy {
 				AttachLineToCompound(builder, compound, line->Start->X, line->Start->Y, line->Start->Z, line->End->X, line->End->Y, line->End->Z);
 			}
 		}
-		IManagedObjHandle^ ImportBlueprint(Blueprint^ blueprint) {
+
+		virtual IManagedObjHandle^ ImportBlueprint(Blueprint^ blueprint) {
 			TopoDS_Compound compound;
 			BRep_Builder builder;
 
@@ -5470,7 +5420,7 @@ namespace OCCTProxy {
 			return ret;
 		}
 
-		IManagedObjHandle^ ImportBlueprint(Blueprint3d^ blueprint) {
+		virtual IManagedObjHandle^ ImportBlueprint(Blueprint3d^ blueprint) {
 			TopoDS_Compound compound;
 			BRep_Builder builder;
 
@@ -5619,7 +5569,7 @@ namespace OCCTProxy {
 		/// <summary>
 		///Initialize OCCTProxy
 		/// </summary>
-		void InitOCCTProxy(void)
+		virtual void InitOCCTProxy(void)
 		{
 			myGraphicDriver() = NULL;
 			myViewer() = NULL;

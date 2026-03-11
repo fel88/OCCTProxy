@@ -182,7 +182,12 @@ private:
 };
 struct ObjHandle {
 public:
-
+	ObjHandle() {}
+	ObjHandle(IManagedObjHandle^ n) {
+		bindId = n->BindId;
+		aisShapeBindId = n->AisShapeBindId;
+		shapeType = n->ShapeType;
+	}
 	int bindId;
 	int aisShapeBindId;
 	int shapeType;
@@ -190,29 +195,8 @@ public:
 
 
 
-public enum class CurveType
-{
-	Line,
-	Circle,
-	Ellipse,
-	Hyperbola,
-	Parabola,
-	BezierCurve,
-	BSplineCurve,
-	OffsetCurve,
-	OtherCurve
-};
 
-public ref class EdgeInfo {
-public:
-	CurveType CurveType;
-	Vector3d COM;//center of mass
-	Vector3d Start;
-	Vector3d End;
-	double Length;
-	int  BindId;
-	int  AisShapeBindId;
-};
+
 
 public ref class CircleEdgeInfo : EdgeInfo {
 public:
@@ -221,59 +205,23 @@ public:
 
 public ref class SurfInfo : public ISurfInfo {
 public:
-	Vector3d _position;
-	Vector3d _COM;//center of mass
-	// A read-write property with custom logic
-	virtual property Vector3d COM
-	{
-		Vector3d get()
-		{
-			return this->_COM;
-		}
-		void set(Vector3d v)
-		{
-			this->_COM = v;
-		}
-	}
-
-	virtual property Vector3d Position
-	{
-		Vector3d get()
-		{
-			return this->_position;
-		}
-		void set(Vector3d v)
-		{
-			this->_position = v;
-		}
-	}
-	virtual property int BindId
-	{
-		int get()
-		{
-			return this->_bindId;
-		}
-		void set(int v)
-		{
-			this->_bindId = v;
-		}
-	}
-
-	int _bindId;
-	int AisShapeBindId;//parent
+	virtual property Vector3d COM;
+	virtual property Vector3d Position;
+	virtual property int BindId;
+	virtual property int AisShapeBindId;//parent
 };
 
-public ref class VertInfo {
+public ref class VertInfo :public IVertInfo {
 public:
-	Vector3d Position;
+	virtual property Vector3d Position;
 
-	int BindId;
-	int AisShapeBindId;//parent
+	virtual property int BindId;
+	virtual property int AisShapeBindId;//parent
 };
 
-public ref class PlaneSurfInfo : SurfInfo {
+public ref class PlaneSurfInfo : SurfInfo, IPlaneSurfInfo {
 public:
-	Vector3d Normal;
+	virtual property Vector3d Normal;
 };
 
 public ref class SurfOfRevolutionInfo : SurfInfo {
@@ -304,11 +252,11 @@ public:
 	double Radius;
 };
 
-public ref class TopObjHandle {
+public ref class TopObjHandle : public ITopObjHandle {
 public:
 
-	int BindId;
-	int ShapeType;
+	virtual property int BindId;
+	virtual property int ShapeType;
 
 	void FromObjHandle(ObjHandle h) {
 
@@ -327,12 +275,12 @@ public:
 	}
 };
 
-public ref class ManagedObjHandle {
+public ref class ManagedObjHandle : public IManagedObjHandle {
 public:
 
-	int BindId;
-	int AisShapeBindId;//parent
-	int ShapeType;
+	virtual property int BindId;
+	virtual property int ShapeType;
+	virtual property int AisShapeBindId;//parent
 
 	void FromObjHandle(ObjHandle h) {
 
@@ -348,8 +296,10 @@ public:
 		h.shapeType = ShapeType;
 		h.aisShapeBindId = AisShapeBindId;
 
+
 		return h;
 	}
+
 };
 
 //! Auxiliary tool for converting C# string into UTF-8 string.
@@ -1987,2429 +1937,2874 @@ public:
 
 
 namespace OCCTProxy {
-/// <summary>
-/// Proxy class encapsulating calls to OCCT C++ classes within 
-/// C++/CLI class visible from .Net (CSharp)
-/// </summary>
-public ref class OCCTProxy
-{
-
-
-public:
-
-	void runOpenTk(IntPtr wnd, IntPtr glctx)
+	/// <summary>
+	/// Proxy class encapsulating calls to OCCT C++ classes within 
+	/// C++/CLI class visible from .Net (CSharp)
+	/// </summary>
+	public ref class OCCTProxy
 	{
-		gview->initWindow(800, 600, wnd.ToPointer(), "OCCT IMGUI");
-
-		gview->initViewer(glctx.ToPointer());
-
-		initDemoScene();
-		myView() = gview->myView;
-		myViewer() = gview->myViewer;
-		myAISContext() = gview->myContext;
-		impl->setAisCtx(myAISContext());
-		SetDefaultDrawerParams();
-		SetDefaultGradient();
-		if (myView().IsNull())
-			return;
 
 
-		myView()->MustBeResized();
-		//myOcctWindow->Map();
-		initGui();
-		//mainloop();
-		//cleanup();
-	}
-	void MouseMove(int x, int y) {
-		gview->MouseMove(x, y);
-	}
-	void Resize(int x, int y) {
-		gview->onResize(x, y);
-	}
+	public:
 
-	void ShowStats(bool status) {
-		gview->ShowStats(status);
-	}
-
-	void MouseDown(int btn, int x, int y) {
-		gview->MouseDown(btn, x, y);
-	}
-
-	void MouseUp(int btn, int x, int y) {
-		gview->MouseUp(btn, x, y);
-	}
-
-	bool ImGuiMouseUp(int btn, int x, int y) {
-		return gview->ImGuiMouseUp(btn, x, y);
-	}
-
-	bool ImGuiMouseDown(int btn, int x, int y) {
-		return gview->ImGuiMouseDown(btn, x, y);
-	}
-
-	void MouseScroll(int x, int y, int offset) {
-		gview->MouseScroll(x, y, offset);
-	}
-	void iterate() {
-		gview->iterate();
-	}
-	void StartRenderGui() {
-		gview->StartRenderGui();
-	}
-
-	void EndRenderGui() {
-		gview->EndRenderGui();
-	}
-
-	void ShowDemoWindow() {
-		gview->ShowDemoWindow();
-	}
-
-	void Begin(System::String^ str) {
-
-		// Convert to std::string
-		std::string nativeString = msclr::interop::marshal_as<std::string>(str);
-
-		// Get const char*
-		const char* cstr_const = nativeString.c_str();
-		gview->Begin(cstr_const);
-	}
-
-	void Text(System::String^ str) {
-		// Convert to std::string
-		std::string nativeString = msclr::interop::marshal_as<std::string>(str);
-
-		// Get const char*
-		const char* cstr_const = nativeString.c_str();
-		gview->Text(cstr_const);
-	}
-
-	bool Button(System::String^ str) {
-		// Convert to std::string
-		std::string nativeString = msclr::interop::marshal_as<std::string>(str);
-
-		// Get const char*
-		const char* cstr_const = nativeString.c_str();
-		return gview->Button(cstr_const);
-	}
-
-	bool Checkbox(System::String^ str, bool state) {
-		// Convert to std::string
-		std::string nativeString = msclr::interop::marshal_as<std::string>(str);
-
-		// Get const char*
-		const char* cstr_const = nativeString.c_str();
-		return gview->Checkbox(cstr_const, state);
-	}
-	void SetNextWindowSizeConstraints(int minx, int miny, int maxx, int maxy) {
-
-		return gview->SetNextWindowSizeConstraints(minx, miny, maxx, maxy);
-	}
-
-	void End() {
-		gview->End();
-	}
-	void cleanup()
-	{
-		gview->cleanup();
-
-	}
-	void initDemoScene()
-	{
-		if (myAISContext().IsNull())
+		void runOpenTk(IntPtr wnd, IntPtr glctx)
 		{
-			return;
+			gview->initWindow(800, 600, wnd.ToPointer(), "OCCT IMGUI");
+
+			gview->initViewer(glctx.ToPointer());
+
+			initDemoScene();
+			myView() = gview->myView;
+			myViewer() = gview->myViewer;
+			myAISContext() = gview->myContext;
+			impl->setAisCtx(myAISContext());
+			SetDefaultDrawerParams();
+			SetDefaultGradient();
+			if (myView().IsNull())
+				return;
+
+
+			myView()->MustBeResized();
+			//myOcctWindow->Map();
+			initGui();
+			//mainloop();
+			//cleanup();
+		}
+		void MouseMove(int x, int y) {
+			gview->MouseMove(x, y);
+		}
+		void Resize(int x, int y) {
+			gview->onResize(x, y);
 		}
 
-		myView()->TriedronDisplay(Aspect_TOTP_LEFT_LOWER, Quantity_NOC_GOLD, 0.08, V3d_WIREFRAME);
+		void ShowStats(bool status) {
+			gview->ShowStats(status);
+		}
 
-		gp_Ax2 anAxis;
-		anAxis.SetLocation(gp_Pnt(0.0, 0.0, 0.0));
-		Handle(AIS_Shape) aBox = new AIS_Shape(BRepPrimAPI_MakeBox(anAxis, 50, 50, 50).Shape());
-		myAISContext()->Display(aBox, AIS_Shaded, 0, false);
-		anAxis.SetLocation(gp_Pnt(25.0, 125.0, 0.0));
-		Handle(AIS_Shape) aCone = new AIS_Shape(BRepPrimAPI_MakeCone(anAxis, 25, 0, 50).Shape());
-		myAISContext()->Display(aCone, AIS_Shaded, 0, false);
+		void MouseDown(int btn, int x, int y) {
+			gview->MouseDown(btn, x, y);
+		}
 
-		TCollection_AsciiString aGlInfo;
+		void MouseUp(int btn, int x, int y) {
+			gview->MouseUp(btn, x, y);
+		}
+
+		bool ImGuiMouseUp(int btn, int x, int y) {
+			return gview->ImGuiMouseUp(btn, x, y);
+		}
+
+		bool ImGuiMouseDown(int btn, int x, int y) {
+			return gview->ImGuiMouseDown(btn, x, y);
+		}
+
+		void MouseScroll(int x, int y, int offset) {
+			gview->MouseScroll(x, y, offset);
+		}
+		void iterate() {
+			gview->iterate();
+		}
+		void StartRenderGui() {
+			gview->StartRenderGui();
+		}
+
+		void EndRenderGui() {
+			gview->EndRenderGui();
+		}
+
+		void ShowDemoWindow() {
+			gview->ShowDemoWindow();
+		}
+
+		void Begin(System::String^ str) {
+
+			// Convert to std::string
+			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
+
+			// Get const char*
+			const char* cstr_const = nativeString.c_str();
+			gview->Begin(cstr_const);
+		}
+
+		void Text(System::String^ str) {
+			// Convert to std::string
+			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
+
+			// Get const char*
+			const char* cstr_const = nativeString.c_str();
+			gview->Text(cstr_const);
+		}
+
+		bool Button(System::String^ str) {
+			// Convert to std::string
+			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
+
+			// Get const char*
+			const char* cstr_const = nativeString.c_str();
+			return gview->Button(cstr_const);
+		}
+
+		bool Checkbox(System::String^ str, bool state) {
+			// Convert to std::string
+			std::string nativeString = msclr::interop::marshal_as<std::string>(str);
+
+			// Get const char*
+			const char* cstr_const = nativeString.c_str();
+			return gview->Checkbox(cstr_const, state);
+		}
+		void SetNextWindowSizeConstraints(int minx, int miny, int maxx, int maxy) {
+
+			return gview->SetNextWindowSizeConstraints(minx, miny, maxx, maxy);
+		}
+
+		void End() {
+			gview->End();
+		}
+		void cleanup()
 		{
-			TColStd_IndexedDataMapOfStringString aRendInfo;
-			myView()->DiagnosticInformation(aRendInfo, Graphic3d_DiagnosticInfo_Basic);
-			for (TColStd_IndexedDataMapOfStringString::Iterator aValueIter(aRendInfo); aValueIter.More(); aValueIter.Next())
+			gview->cleanup();
+
+		}
+		void initDemoScene()
+		{
+			if (myAISContext().IsNull())
 			{
-				if (!aGlInfo.IsEmpty()) { aGlInfo += "\n"; }
-				aGlInfo += TCollection_AsciiString("  ") + aValueIter.Key() + ": " + aValueIter.Value();
+				return;
+			}
+
+			myView()->TriedronDisplay(Aspect_TOTP_LEFT_LOWER, Quantity_NOC_GOLD, 0.08, V3d_WIREFRAME);
+
+			gp_Ax2 anAxis;
+			anAxis.SetLocation(gp_Pnt(0.0, 0.0, 0.0));
+			Handle(AIS_Shape) aBox = new AIS_Shape(BRepPrimAPI_MakeBox(anAxis, 50, 50, 50).Shape());
+			myAISContext()->Display(aBox, AIS_Shaded, 0, false);
+			anAxis.SetLocation(gp_Pnt(25.0, 125.0, 0.0));
+			Handle(AIS_Shape) aCone = new AIS_Shape(BRepPrimAPI_MakeCone(anAxis, 25, 0, 50).Shape());
+			myAISContext()->Display(aCone, AIS_Shaded, 0, false);
+
+			TCollection_AsciiString aGlInfo;
+			{
+				TColStd_IndexedDataMapOfStringString aRendInfo;
+				myView()->DiagnosticInformation(aRendInfo, Graphic3d_DiagnosticInfo_Basic);
+				for (TColStd_IndexedDataMapOfStringString::Iterator aValueIter(aRendInfo); aValueIter.More(); aValueIter.Next())
+				{
+					if (!aGlInfo.IsEmpty()) { aGlInfo += "\n"; }
+					aGlInfo += TCollection_AsciiString("  ") + aValueIter.Key() + ": " + aValueIter.Value();
+				}
+			}
+			Message::DefaultMessenger()->Send(TCollection_AsciiString("OpenGL info:\n") + aGlInfo, Message_Info);
+		}
+
+		void initGui()
+		{
+			IMGUI_CHECKVERSION();
+			ImGui::CreateContext();
+
+			ImGuiIO& aIO = ImGui::GetIO();
+			aIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+			ImGui_ImplGlfw_InitForOpenGL(gview->myOcctWindow->getGlfwWindow(), Standard_True);
+			ImGui_ImplOpenGL3_Init("#version 330");
+
+			// Setup Dear ImGui style.
+			//ImGui::StyleColorsClassic();
+		}
+
+		static OCCImpl* impl = new OCCImpl();
+		static GlfwOcctView* gview = new GlfwOcctView();
+		// ============================================
+		// Viewer functionality
+		// ============================================
+
+		/// <summary>
+		///Initialize a viewer
+		/// </summary>
+		/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
+		bool InitViewer(System::IntPtr theWnd)
+		{
+			try
+			{
+				Handle(Aspect_DisplayConnection) aDisplayConnection;
+				myGraphicDriver() = new OpenGl_GraphicDriver(aDisplayConnection);
+			}
+			catch (Standard_Failure)
+			{
+				return false;
+			}
+
+			myViewer() = new V3d_Viewer(myGraphicDriver());
+			myViewer()->SetDefaultLights();
+
+			myViewer()->SetLightOn();
+			//myViewer()->DefaultShadingModel();
+			myView() = myViewer()->CreateView();
+
+
+
+			/*
+			Graphic3d_RenderingParams& aParams = myView()->ChangeRenderingParams();
+			aParams.Method = Graphic3d_RM_RASTERIZATION;
+			aParams.RaytracingDepth = 3;
+			aParams.IsShadowEnabled = true;
+			aParams.IsReflectionEnabled = true;
+			aParams.IsAntialiasingEnabled = true;
+			aParams.IsTransparentShadowEnabled = false;
+			aParams.ToReverseStereo = true;
+			aParams.StereoMode = Graphic3d_StereoMode::Graphic3d_StereoMode_QuadBuffer;
+			aParams.AnaglyphFilter = Graphic3d_RenderingParams::Anaglyph::Anaglyph_RedCyan_Optimized;
+			aParams.FrustumCullingState = Graphic3d_RenderingParams::FrustumCulling::FrustumCulling_On;
+			aParams.LineFeather = 1.0;
+			aParams.NbMsaaSamples = 4;
+			myView()->Redraw();
+			myViewer()->SetViewOn(myView());*/
+			myView()->SetBgGradientColors(Quantity_Color(0.5, 0.5, 0.5, Quantity_TOC_RGB),
+				Quantity_Color(0.3, 0.3, 0.3, Quantity_TOC_RGB),
+				Aspect_GFM_VER,
+				Standard_True);
+
+			//add8e6
+			//f0f8ff
+			SetDefaultGradient();
+			myView()->SetLightOn();
+			myView()->SetLightOff();
+
+			Handle(WNT_Window) aWNTWindow = new WNT_Window(reinterpret_cast<HWND> (theWnd.ToPointer()));
+			myView()->SetWindow(aWNTWindow);
+			if (!aWNTWindow->IsMapped())
+			{
+				aWNTWindow->Map();
+			}
+
+			myAISContext() = new AIS_InteractiveContext(myViewer());
+
+			impl->setAisCtx(myAISContext());
+			gview->setAisCtx(myAISContext());
+
+			myAISContext()->UpdateCurrentViewer();
+			myView()->Redraw();
+			myView()->MustBeResized();
+			SetDefaultDrawerParams();
+			return true;
+		}
+		/// <summary>
+		///Initialize a viewer
+		/// </summary>
+		/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
+		bool InitViewer2(System::IntPtr glctx)
+		{
+			try
+			{
+				Handle(Aspect_DisplayConnection) aDisplayConnection;
+				myGraphicDriver() = new OpenGl_GraphicDriver(aDisplayConnection);
+			}
+			catch (Standard_Failure)
+			{
+				return false;
+			}
+
+			myViewer() = new V3d_Viewer(myGraphicDriver());
+			myViewer()->SetDefaultLights();
+
+			myViewer()->SetLightOn();
+			//myViewer()->DefaultShadingModel();
+			myView() = myViewer()->CreateView();
+
+
+
+			myView()->SetBgGradientColors(Quantity_Color(0.5, 0.5, 0.5, Quantity_TOC_RGB),
+				Quantity_Color(0.3, 0.3, 0.3, Quantity_TOC_RGB),
+				Aspect_GFM_VER,
+				Standard_True);
+
+			//add8e6
+			//f0f8ff
+			SetDefaultGradient();
+			myView()->SetLightOn();
+			myView()->SetLightOff();
+
+			myView()->SetWindow(gview->myOcctWindow, glctx.ToPointer());
+			myView()->ChangeRenderingParams().ToShowStats = Standard_True;
+
+			myAISContext() = new AIS_InteractiveContext(myViewer());
+
+			impl->setAisCtx(myAISContext());
+			gview->setAisCtx(myAISContext());
+
+			myAISContext()->UpdateCurrentViewer();
+			myView()->Redraw();
+			myView()->MustBeResized();
+			SetDefaultDrawerParams();
+			return true;
+		}
+
+		void SetDefaultGradient() {
+			myView()->SetBgGradientColors(
+				Quantity_Color(0xAD / (float)0xFF - 0.2f, 0xD8 / (float)0xFF - 0.2f, 0xE6 / (float)0xFF, Quantity_TOC_RGB),
+				Quantity_Color(0xF0 / (float)0xFF - 0.3f, 0xF8 / (float)0xFF - 0.3f, 0xFF / (float)0xFF - 0.3f, Quantity_TOC_RGB),
+				Aspect_GFM_DIAG2);
+		}
+
+		ManagedObjHandle^ GetSelectedObject() {
+			auto ret = impl->getSelectedObject(myAISContext().get());
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+			hh->FromObjHandle(ret);
+			return hh;
+
+		}
+
+		int GetTotalShapes() {
+
+			Handle(AIS_InteractiveContext) theCtx = myAISContext();
+
+			int counter = 0;
+			AIS_ListOfInteractive aDispList;
+			theCtx->DisplayedObjects(aDispList);
+			for (const Handle(AIS_InteractiveObject)& aPrsIter : aDispList)
+			{
+				Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(aPrsIter);
+				if (aShape.IsNull())
+					continue;
+				counter++;
+
+
+			}
+			//myAISContext()->Deactivate();
+			return counter;
+
+		}
+		List<ManagedObjHandle^>^ GetSelectedObjects() {
+			auto objs = impl->getSelectedObjectsList();
+			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			for (size_t i = 0; i < objs.size(); i++)
+			{
+				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+				hh->FromObjHandle(objs[i]);
+				ret->Add(hh);
+			}
+			return ret;
+		}
+
+		List<ManagedObjHandle^>^ GetDetectedObjects() {
+			auto objs = impl->getDetectedObjectsList();
+			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			for (size_t i = 0; i < objs.size(); i++)
+			{
+				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+				hh->FromObjHandle(objs[i]);
+				ret->Add(hh);
+			}
+			return ret;
+		}
+
+		ManagedObjHandle^ GetSelectedEdge() {
+			auto ret = impl->getSelectedEdge();
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+			hh->FromObjHandle(ret);
+			return hh;
+		}
+
+		List<ManagedObjHandle^>^ GetSelectedEdges() {
+
+			std::vector<ObjHandle> edges;
+			impl->GetSelectedEdges(edges);
+			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			for (size_t i = 0; i < edges.size(); i++)
+			{
+				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+				hh->FromObjHandle(edges[i]);
+				ret->Add(hh);
+			}
+
+
+			return ret;
+		}
+		List<ManagedObjHandle^>^ GetDetectedVertices() {
+
+			std::vector<ObjHandle> verts;
+			impl->GetDetectedVertices(verts);
+			List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
+			for (size_t i = 0; i < verts.size(); i++)
+			{
+				ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+				hh->FromObjHandle(verts[i]);
+				ret->Add(hh);
+			}
+
+
+			return ret;
+		}
+		ManagedObjHandle^ GetDetectedObject() {
+			auto ret = impl->getDetectedObject(myAISContext().get());
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+			hh->FromObjHandle(ret);
+			return hh;
+		}
+
+		void SetDefaultDrawerParams() {
+			auto ais = myAISContext();
+			auto drawer = ais->DefaultDrawer();
+			drawer->SetFaceBoundaryDraw(true);
+			drawer->SetColor(Quantity_NOC_BLACK);
+			myAISContext()->EnableDrawHiddenLine();
+			//drawer->SetLineAspect()
+			/*
+			* raphic3d_RenderingParams& aParams = aView->ChangeRenderingParams();
+	// specifies rendering mode
+	aParams.Method = Graphic3d_RM_RAYTRACING;
+	// maximum ray-tracing depth
+	aParams.RaytracingDepth = 3;
+	// enable shadows rendering
+	aParams.IsShadowEnabled = true;
+	// enable specular reflections
+	aParams.IsReflectionEnabled = true;
+	// enable adaptive anti-aliasing
+	aParams.IsAntialiasingEnabled = true;
+	// enable light propagation through transparent media
+	aParams.IsTransparentShadowEnabled = true;
+	// update the view
+	aView->Update();
+			*/
+			Graphic3d_RenderingParams& aParams = myView()->ChangeRenderingParams();
+			aParams.RenderResolutionScale = 2;
+			aParams.IsShadowEnabled = false;
+			// enable specular reflections
+			aParams.IsReflectionEnabled = false;
+			// enable adaptive anti-aliasing
+			aParams.IsAntialiasingEnabled = false;
+			/*Graphic3d_RenderingParams& rayp = myView()->ChangeRenderingParams();
+			rayp.Method = Graphic3d_RM_RAYTRACING;
+			rayp.IsShadowEnabled = Standard_True;
+			rayp.IsReflectionEnabled = Standard_True;
+
+			myAISContext()->UpdateCurrentViewer();*/
+
+			//aParams.Method = Graphic3d_RM_RASTERIZATION;
+			//aParams.RaytracingDepth = 3;
+			//aParams.IsShadowEnabled = true;
+			//aParams.IsReflectionEnabled = true;
+			//aParams.IsAntialiasingEnabled = true;
+			//aParams.IsTransparentShadowEnabled = false;
+			//aParams.ToReverseStereo = true;
+			//aParams.StereoMode = Graphic3d_StereoMode::Graphic3d_StereoMode_QuadBuffer;
+			//aParams.AnaglyphFilter = Graphic3d_RenderingParams::Anaglyph::Anaglyph_RedCyan_Optimized;
+			//aParams.FrustumCullingState = Graphic3d_RenderingParams::FrustumCulling::FrustumCulling_On;
+			//aParams.LineFeather = 1.0;
+			//aParams.NbMsaaSamples = 4;
+			//auto IsSamplingOn = true;
+			//if (IsSamplingOn)
+			//	aParams.NbMsaaSamples = 32;
+			//else
+			//	aParams.NbMsaaSamples = 16;
+
+			//aParams.Method = Graphic3d_RM_RAYTRACING;
+			//aParams.IsShadowEnabled = true;
+			//aParams.IsReflectionEnabled = true;
+		}
+
+		/// <summary>
+		/// Make dump of current view to file
+		/// </summary>
+		/// <param name="theFileName">Name of dump file</param>
+		bool Dump(const TCollection_AsciiString& theFileName)
+		{
+			if (myView().IsNull())
+			{
+				return false;
+			}
+			myView()->Redraw();
+			return myView()->Dump(theFileName.ToCString()) != Standard_False;
+		}
+
+		/// <summary>
+		///Redraw view
+		/// </summary>
+		void RedrawView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->Redraw();
 			}
 		}
-		Message::DefaultMessenger()->Send(TCollection_AsciiString("OpenGL info:\n") + aGlInfo, Message_Info);
-	}
 
-	void initGui()
-	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-
-		ImGuiIO& aIO = ImGui::GetIO();
-		aIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-		ImGui_ImplGlfw_InitForOpenGL(gview->myOcctWindow->getGlfwWindow(), Standard_True);
-		ImGui_ImplOpenGL3_Init("#version 330");
-
-		// Setup Dear ImGui style.
-		//ImGui::StyleColorsClassic();
-	}
-
-	static OCCImpl* impl = new OCCImpl();
-	static GlfwOcctView* gview = new GlfwOcctView();
-	// ============================================
-	// Viewer functionality
-	// ============================================
-
-	/// <summary>
-	///Initialize a viewer
-	/// </summary>
-	/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
-	bool InitViewer(System::IntPtr theWnd)
-	{
-		try
+		/// <summary>
+		///Update view
+		/// </summary>
+		void UpdateView(void)
 		{
-			Handle(Aspect_DisplayConnection) aDisplayConnection;
-			myGraphicDriver() = new OpenGl_GraphicDriver(aDisplayConnection);
-		}
-		catch (Standard_Failure)
-		{
-			return false;
+			if (!myView().IsNull())
+			{
+				myView()->MustBeResized();
+			}
 		}
 
-		myViewer() = new V3d_Viewer(myGraphicDriver());
-		myViewer()->SetDefaultLights();
+		/// <summary>
+		///Set computed mode in false
+		/// </summary>
+		void SetDegenerateModeOn(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetComputedMode(Standard_False);
+				myView()->Redraw();
+			}
+		}
 
-		myViewer()->SetLightOn();
-		//myViewer()->DefaultShadingModel();
-		myView() = myViewer()->CreateView();
+		/// <summary>
+		///Set computed mode in true
+		/// </summary>
+		void SetDegenerateModeOff(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetComputedMode(Standard_True);
+				myView()->Redraw();
+			}
+		}
+
+		/// <summary>
+		///Fit all
+		/// </summary>
+		void WindowFitAll(int theXmin, int theYmin, int theXmax, int theYmax)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->WindowFitAll(theXmin, theYmin, theXmax, theYmax);
+			}
+		}
+
+		/// <summary>
+		///Current place of window
+		/// </summary>
+		/// <param name="theZoomFactor">Current zoom</param>
+		void Place(int theX, int theY, float theZoomFactor)
+		{
+			Standard_Real aZoomFactor = theZoomFactor;
+			if (!myView().IsNull())
+			{
+				myView()->Place(theX, theY, aZoomFactor);
+			}
+		}
+
+		/// <summary>
+		///Set Zoom
+		/// </summary>
+		void Zoom(int theX1, int theY1, int theX2, int theY2)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->Zoom(theX1, theY1, theX2, theY2);
+			}
+		}
 
 
+		void ZoomAtPoint(int theX1, int theY1, int theX2, int theY2)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->ZoomAtPoint(theX1, theY1, theX2, theY2);
+			}
+		}
+
+		void StartZoomAtPoint(int theX1, int theY1)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->StartZoomAtPoint(theX1, theY1);
+			}
+		}
+
+		/// <summary>
+		///Set Pan
+		/// </summary>
+		void Pan(int theX, int theY)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->Pan(theX, theY);
+			}
+		}
+
+		/// <summary>
+		///Rotation
+		/// </summary>
+		void Rotation(int theX, int theY)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->Rotation(theX, theY);
+			}
+		}
+
+		/// <summary>
+		///Start rotation
+		/// </summary>
+		void StartRotation(int theX, int theY)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->StartRotation(theX, theY);
+			}
+		}
+
+		Nullable<Vector3d> GetGravityPoint()
+		{
+			if (!myView().IsNull())
+			{
+				auto ret = myView()->GravityPoint();
+				Vector3d v;
+				v.X = ret.X();
+				v.X = ret.Y();
+				v.X = ret.Z();
+				return v;
+			}
+			return {};
+		}
+
+		Nullable<float> ProjectionFOVy()
+		{
+			if (myView().IsNull())
+				return {};
+
+			return myView()->Camera()->FOVy();
+		}
+
+		Nullable<float> ProjectionAspect()
+		{
+			if (myView().IsNull())
+				return {};
+
+			return myView()->Camera()->Aspect();
+		}
+
+		Nullable<float> ProjectionZNear()
+		{
+			if (myView().IsNull())
+				return {};
+
+			return myView()->Camera()->ZNear();
+		}
+
+		Nullable<float> ProjectionZFar()
+		{
+			if (myView().IsNull())
+				return {};
+
+			return myView()->Camera()->ZFar();
+		}
+
+		Nullable<float> ProjectionScale()
+		{
+			if (myView().IsNull())
+				return {};
+
+			return (int)myView()->Camera()->Scale();
+		}
+
+		Nullable<int> ProjectionType()
+		{
+			if (myView().IsNull())
+				return {};
+
+			return (int)myView()->Camera()->ProjectionType();
+		}
 
 		/*
-		Graphic3d_RenderingParams& aParams = myView()->ChangeRenderingParams();
-		aParams.Method = Graphic3d_RM_RASTERIZATION;
-		aParams.RaytracingDepth = 3;
-		aParams.IsShadowEnabled = true;
-		aParams.IsReflectionEnabled = true;
-		aParams.IsAntialiasingEnabled = true;
-		aParams.IsTransparentShadowEnabled = false;
-		aParams.ToReverseStereo = true;
-		aParams.StereoMode = Graphic3d_StereoMode::Graphic3d_StereoMode_QuadBuffer;
-		aParams.AnaglyphFilter = Graphic3d_RenderingParams::Anaglyph::Anaglyph_RedCyan_Optimized;
-		aParams.FrustumCullingState = Graphic3d_RenderingParams::FrustumCulling::FrustumCulling_On;
-		aParams.LineFeather = 1.0;
-		aParams.NbMsaaSamples = 4;
-		myView()->Redraw();
-		myViewer()->SetViewOn(myView());*/
-		myView()->SetBgGradientColors(Quantity_Color(0.5, 0.5, 0.5, Quantity_TOC_RGB),
-			Quantity_Color(0.3, 0.3, 0.3, Quantity_TOC_RGB),
-			Aspect_GFM_VER,
-			Standard_True);
+		Graphic3d_Camera::ProjectionType aProjectionType = aCamera->ProjectionType();
+		Standard_Real aFovY = aCamera->FOVy(); // For perspective
+		Standard_Real anAspect = aCamera->Aspect();
+		Standard_Real aZNear = aCamera->ZNear();
+		Standard_Real aZFar = aCamera->ZFar();*/
 
-		//add8e6
-		//f0f8ff
-		SetDefaultGradient();
-		myView()->SetLightOn();
-		myView()->SetLightOff();
-
-		Handle(WNT_Window) aWNTWindow = new WNT_Window(reinterpret_cast<HWND> (theWnd.ToPointer()));
-		myView()->SetWindow(aWNTWindow);
-		if (!aWNTWindow->IsMapped())
+		Nullable<Matrix4> ProjectionMatrix()
 		{
-			aWNTWindow->Map();
-		}
+			if (myView().IsNull())
+				return {};
+
+			auto ret = myView()->Camera()->ProjectionMatrix();
+			Matrix4 v;
+			auto row0 = ret.GetRow(0);
+			auto row1 = ret.GetRow(1);
+			auto row2 = ret.GetRow(2);
+			auto row3 = ret.GetRow(3);
+			v.Row0 = Vector4(row0.x(), row0.y(), row0.z(), row0.w());
+			v.Row1 = Vector4(row1.x(), row1.y(), row1.z(), row1.w());
+			v.Row2 = Vector4(row2.x(), row2.y(), row2.z(), row2.w());
+			v.Row3 = Vector4(row3.x(), row3.y(), row3.z(), row3.w());
 
-		myAISContext() = new AIS_InteractiveContext(myViewer());
-
-		impl->setAisCtx(myAISContext());
-		gview->setAisCtx(myAISContext());
-
-		myAISContext()->UpdateCurrentViewer();
-		myView()->Redraw();
-		myView()->MustBeResized();
-		SetDefaultDrawerParams();
-		return true;
-	}
-	/// <summary>
-	///Initialize a viewer
-	/// </summary>
-	/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
-	bool InitViewer2(System::IntPtr glctx)
-	{
-		try
-		{
-			Handle(Aspect_DisplayConnection) aDisplayConnection;
-			myGraphicDriver() = new OpenGl_GraphicDriver(aDisplayConnection);
-		}
-		catch (Standard_Failure)
-		{
-			return false;
-		}
-
-		myViewer() = new V3d_Viewer(myGraphicDriver());
-		myViewer()->SetDefaultLights();
-
-		myViewer()->SetLightOn();
-		//myViewer()->DefaultShadingModel();
-		myView() = myViewer()->CreateView();
-
-
-
-		myView()->SetBgGradientColors(Quantity_Color(0.5, 0.5, 0.5, Quantity_TOC_RGB),
-			Quantity_Color(0.3, 0.3, 0.3, Quantity_TOC_RGB),
-			Aspect_GFM_VER,
-			Standard_True);
-
-		//add8e6
-		//f0f8ff
-		SetDefaultGradient();
-		myView()->SetLightOn();
-		myView()->SetLightOff();
-
-		myView()->SetWindow(gview->myOcctWindow, glctx.ToPointer());
-		myView()->ChangeRenderingParams().ToShowStats = Standard_True;
-
-		myAISContext() = new AIS_InteractiveContext(myViewer());
-
-		impl->setAisCtx(myAISContext());
-		gview->setAisCtx(myAISContext());
-
-		myAISContext()->UpdateCurrentViewer();
-		myView()->Redraw();
-		myView()->MustBeResized();
-		SetDefaultDrawerParams();
-		return true;
-	}
-
-	void SetDefaultGradient() {
-		myView()->SetBgGradientColors(
-			Quantity_Color(0xAD / (float)0xFF - 0.2f, 0xD8 / (float)0xFF - 0.2f, 0xE6 / (float)0xFF, Quantity_TOC_RGB),
-			Quantity_Color(0xF0 / (float)0xFF - 0.3f, 0xF8 / (float)0xFF - 0.3f, 0xFF / (float)0xFF - 0.3f, Quantity_TOC_RGB),
-			Aspect_GFM_DIAG2);
-	}
-
-	ManagedObjHandle^ GetSelectedObject() {
-		auto ret = impl->getSelectedObject(myAISContext().get());
-
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-		hh->FromObjHandle(ret);
-		return hh;
-
-	}
-
-	int GetTotalShapes() {
-
-		Handle(AIS_InteractiveContext) theCtx = myAISContext();
-
-		int counter = 0;
-		AIS_ListOfInteractive aDispList;
-		theCtx->DisplayedObjects(aDispList);
-		for (const Handle(AIS_InteractiveObject)& aPrsIter : aDispList)
-		{
-			Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(aPrsIter);
-			if (aShape.IsNull())
-				continue;
-			counter++;
-
-
-		}
-		//myAISContext()->Deactivate();
-		return counter;
-
-	}
-	List<ManagedObjHandle^>^ GetSelectedObjects() {
-		auto objs = impl->getSelectedObjectsList();
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-		for (size_t i = 0; i < objs.size(); i++)
-		{
-			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-			hh->FromObjHandle(objs[i]);
-			ret->Add(hh);
-		}
-		return ret;
-	}
-
-	List<ManagedObjHandle^>^ GetDetectedObjects() {
-		auto objs = impl->getDetectedObjectsList();
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-		for (size_t i = 0; i < objs.size(); i++)
-		{
-			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-			hh->FromObjHandle(objs[i]);
-			ret->Add(hh);
-		}
-		return ret;
-	}
-
-	ManagedObjHandle^ GetSelectedEdge() {
-		auto ret = impl->getSelectedEdge();
-
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-		hh->FromObjHandle(ret);
-		return hh;
-	}
-
-	List<ManagedObjHandle^>^ GetSelectedEdges() {
-
-		std::vector<ObjHandle> edges;
-		impl->GetSelectedEdges(edges);
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-		for (size_t i = 0; i < edges.size(); i++)
-		{
-			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-			hh->FromObjHandle(edges[i]);
-			ret->Add(hh);
-		}
-
-
-		return ret;
-	}
-	List<ManagedObjHandle^>^ GetDetectedVertices() {
-
-		std::vector<ObjHandle> verts;
-		impl->GetDetectedVertices(verts);
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-		for (size_t i = 0; i < verts.size(); i++)
-		{
-			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-			hh->FromObjHandle(verts[i]);
-			ret->Add(hh);
-		}
-
-
-		return ret;
-	}
-	ManagedObjHandle^ GetDetectedObject() {
-		auto ret = impl->getDetectedObject(myAISContext().get());
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-		hh->FromObjHandle(ret);
-		return hh;
-	}
-
-	void SetDefaultDrawerParams() {
-		auto ais = myAISContext();
-		auto drawer = ais->DefaultDrawer();
-		drawer->SetFaceBoundaryDraw(true);
-		drawer->SetColor(Quantity_NOC_BLACK);
-		myAISContext()->EnableDrawHiddenLine();
-		//drawer->SetLineAspect()
-		/*
-		* raphic3d_RenderingParams& aParams = aView->ChangeRenderingParams();
-// specifies rendering mode
-aParams.Method = Graphic3d_RM_RAYTRACING;
-// maximum ray-tracing depth
-aParams.RaytracingDepth = 3;
-// enable shadows rendering
-aParams.IsShadowEnabled = true;
-// enable specular reflections
-aParams.IsReflectionEnabled = true;
-// enable adaptive anti-aliasing
-aParams.IsAntialiasingEnabled = true;
-// enable light propagation through transparent media
-aParams.IsTransparentShadowEnabled = true;
-// update the view
-aView->Update();
-		*/
-		Graphic3d_RenderingParams& aParams = myView()->ChangeRenderingParams();
-		aParams.RenderResolutionScale = 2;
-		aParams.IsShadowEnabled = false;
-		// enable specular reflections
-		aParams.IsReflectionEnabled = false;
-		// enable adaptive anti-aliasing
-		aParams.IsAntialiasingEnabled = false;
-		/*Graphic3d_RenderingParams& rayp = myView()->ChangeRenderingParams();
-		rayp.Method = Graphic3d_RM_RAYTRACING;
-		rayp.IsShadowEnabled = Standard_True;
-		rayp.IsReflectionEnabled = Standard_True;
-
-		myAISContext()->UpdateCurrentViewer();*/
-
-		//aParams.Method = Graphic3d_RM_RASTERIZATION;
-		//aParams.RaytracingDepth = 3;
-		//aParams.IsShadowEnabled = true;
-		//aParams.IsReflectionEnabled = true;
-		//aParams.IsAntialiasingEnabled = true;
-		//aParams.IsTransparentShadowEnabled = false;
-		//aParams.ToReverseStereo = true;
-		//aParams.StereoMode = Graphic3d_StereoMode::Graphic3d_StereoMode_QuadBuffer;
-		//aParams.AnaglyphFilter = Graphic3d_RenderingParams::Anaglyph::Anaglyph_RedCyan_Optimized;
-		//aParams.FrustumCullingState = Graphic3d_RenderingParams::FrustumCulling::FrustumCulling_On;
-		//aParams.LineFeather = 1.0;
-		//aParams.NbMsaaSamples = 4;
-		//auto IsSamplingOn = true;
-		//if (IsSamplingOn)
-		//	aParams.NbMsaaSamples = 32;
-		//else
-		//	aParams.NbMsaaSamples = 16;
-
-		//aParams.Method = Graphic3d_RM_RAYTRACING;
-		//aParams.IsShadowEnabled = true;
-		//aParams.IsReflectionEnabled = true;
-	}
-
-	/// <summary>
-	/// Make dump of current view to file
-	/// </summary>
-	/// <param name="theFileName">Name of dump file</param>
-	bool Dump(const TCollection_AsciiString& theFileName)
-	{
-		if (myView().IsNull())
-		{
-			return false;
-		}
-		myView()->Redraw();
-		return myView()->Dump(theFileName.ToCString()) != Standard_False;
-	}
-
-	/// <summary>
-	///Redraw view
-	/// </summary>
-	void RedrawView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->Redraw();
-		}
-	}
-
-	/// <summary>
-	///Update view
-	/// </summary>
-	void UpdateView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->MustBeResized();
-		}
-	}
-
-	/// <summary>
-	///Set computed mode in false
-	/// </summary>
-	void SetDegenerateModeOn(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetComputedMode(Standard_False);
-			myView()->Redraw();
-		}
-	}
-
-	/// <summary>
-	///Set computed mode in true
-	/// </summary>
-	void SetDegenerateModeOff(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetComputedMode(Standard_True);
-			myView()->Redraw();
-		}
-	}
-
-	/// <summary>
-	///Fit all
-	/// </summary>
-	void WindowFitAll(int theXmin, int theYmin, int theXmax, int theYmax)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->WindowFitAll(theXmin, theYmin, theXmax, theYmax);
-		}
-	}
-
-	/// <summary>
-	///Current place of window
-	/// </summary>
-	/// <param name="theZoomFactor">Current zoom</param>
-	void Place(int theX, int theY, float theZoomFactor)
-	{
-		Standard_Real aZoomFactor = theZoomFactor;
-		if (!myView().IsNull())
-		{
-			myView()->Place(theX, theY, aZoomFactor);
-		}
-	}
-
-	/// <summary>
-	///Set Zoom
-	/// </summary>
-	void Zoom(int theX1, int theY1, int theX2, int theY2)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->Zoom(theX1, theY1, theX2, theY2);
-		}
-	}
-
-
-	void ZoomAtPoint(int theX1, int theY1, int theX2, int theY2)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->ZoomAtPoint(theX1, theY1, theX2, theY2);
-		}
-	}
-
-	void StartZoomAtPoint(int theX1, int theY1)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->StartZoomAtPoint(theX1, theY1);
-		}
-	}
-
-	/// <summary>
-	///Set Pan
-	/// </summary>
-	void Pan(int theX, int theY)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->Pan(theX, theY);
-		}
-	}
-
-	/// <summary>
-	///Rotation
-	/// </summary>
-	void Rotation(int theX, int theY)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->Rotation(theX, theY);
-		}
-	}
-
-	/// <summary>
-	///Start rotation
-	/// </summary>
-	void StartRotation(int theX, int theY)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->StartRotation(theX, theY);
-		}
-	}
-
-	Nullable<Vector3d> GetGravityPoint()
-	{
-		if (!myView().IsNull())
-		{
-			auto ret = myView()->GravityPoint();
-			Vector3d v;
-			v.X = ret.X();
-			v.X = ret.Y();
-			v.X = ret.Z();
-			return v;
-		}
-		return {};
-	}
-
-	Nullable<float> ProjectionFOVy()
-	{
-		if (myView().IsNull())
-			return {};
-
-		return myView()->Camera()->FOVy();
-	}
-
-	Nullable<float> ProjectionAspect()
-	{
-		if (myView().IsNull())
-			return {};
-
-		return myView()->Camera()->Aspect();
-	}
-
-	Nullable<float> ProjectionZNear()
-	{
-		if (myView().IsNull())
-			return {};
-
-		return myView()->Camera()->ZNear();
-	}
-
-	Nullable<float> ProjectionZFar()
-	{
-		if (myView().IsNull())
-			return {};
-
-		return myView()->Camera()->ZFar();
-	}
-
-	Nullable<float> ProjectionScale()
-	{
-		if (myView().IsNull())
-			return {};
-
-		return (int)myView()->Camera()->Scale();
-	}
-
-	Nullable<int> ProjectionType()
-	{
-		if (myView().IsNull())
-			return {};
-
-		return (int)myView()->Camera()->ProjectionType();
-	}
-
-	/*
-	Graphic3d_Camera::ProjectionType aProjectionType = aCamera->ProjectionType();
-	Standard_Real aFovY = aCamera->FOVy(); // For perspective
-	Standard_Real anAspect = aCamera->Aspect();
-	Standard_Real aZNear = aCamera->ZNear();
-	Standard_Real aZFar = aCamera->ZFar();*/
-
-	Nullable<Matrix4> ProjectionMatrix()
-	{
-		if (myView().IsNull())
-			return {};
-
-		auto ret = myView()->Camera()->ProjectionMatrix();
-		Matrix4 v;
-		auto row0 = ret.GetRow(0);
-		auto row1 = ret.GetRow(1);
-		auto row2 = ret.GetRow(2);
-		auto row3 = ret.GetRow(3);
-		v.Row0 = Vector4(row0.x(), row0.y(), row0.z(), row0.w());
-		v.Row1 = Vector4(row1.x(), row1.y(), row1.z(), row1.w());
-		v.Row2 = Vector4(row2.x(), row2.y(), row2.z(), row2.w());
-		v.Row3 = Vector4(row3.x(), row3.y(), row3.z(), row3.w());
-
-		return v;
-	}
-
-	Nullable<Matrix4> OrientationMatrix()
-	{
-		if (myView().IsNull())
-			return {};
-
-		auto ret = myView()->Camera()->OrientationMatrix();
-		Matrix4 v;
-		auto row0 = ret.GetRow(0);
-		auto row1 = ret.GetRow(1);
-		auto row2 = ret.GetRow(2);
-		auto row3 = ret.GetRow(3);
-		v.Row0 = Vector4(row0.x(), row0.y(), row0.z(), row0.w());
-		v.Row1 = Vector4(row1.x(), row1.y(), row1.z(), row1.w());
-		v.Row2 = Vector4(row2.x(), row2.y(), row2.z(), row2.w());
-		v.Row3 = Vector4(row3.x(), row3.y(), row3.z(), row3.w());
-
-		return v;
-	}
-
-	Nullable<Vector3d> GetEye()
-	{
-		if (!myView().IsNull())
-		{
-
-			auto ret = myView()->Camera()->Eye();
-			Vector3d v;
-			v.X = ret.X();
-			v.Y = ret.Y();
-			v.Z = ret.Z();
-			return v;
-		}
-		return {};
-	}
-
-	Nullable<Vector3d>  GetCenter()
-	{
-		if (!myView().IsNull())
-		{
-
-			auto ret = myView()->Camera()->Center();
-			Vector3d v;
-			v.X = ret.X();
-			v.Y = ret.Y();
-			v.Z = ret.Z();
 			return v;
 		}
 
-		return {};
-	}
-
-	Nullable<Vector3d>  GetUp()
-	{
-		if (!myView().IsNull())
+		Nullable<Matrix4> OrientationMatrix()
 		{
+			if (myView().IsNull())
+				return {};
 
-			auto ret = myView()->Camera()->Up();
-			Vector3d v;
-			v.X = ret.X();
-			v.Y = ret.Y();
-			v.Z = ret.Z();
+			auto ret = myView()->Camera()->OrientationMatrix();
+			Matrix4 v;
+			auto row0 = ret.GetRow(0);
+			auto row1 = ret.GetRow(1);
+			auto row2 = ret.GetRow(2);
+			auto row3 = ret.GetRow(3);
+			v.Row0 = Vector4(row0.x(), row0.y(), row0.z(), row0.w());
+			v.Row1 = Vector4(row1.x(), row1.y(), row1.z(), row1.w());
+			v.Row2 = Vector4(row2.x(), row2.y(), row2.z(), row2.w());
+			v.Row3 = Vector4(row3.x(), row3.y(), row3.z(), row3.w());
+
 			return v;
 		}
-		return {};
-	}
 
-	/// <summary>
-	///Select by rectangle
-	/// </summary>
-	void Select(int theX1, int theY1, int theX2, int theY2)
-	{
-		if (!myAISContext().IsNull())
+		Nullable<Vector3d> GetEye()
 		{
-			myAISContext()->SelectRectangle(Graphic3d_Vec2i(theX1, theY1),
-				Graphic3d_Vec2i(theX2, theY2),
-				myView());
+			if (!myView().IsNull())
+			{
+
+				auto ret = myView()->Camera()->Eye();
+				Vector3d v;
+				v.X = ret.X();
+				v.Y = ret.Y();
+				v.Z = ret.Z();
+				return v;
+			}
+			return {};
+		}
+
+		Nullable<Vector3d>  GetCenter()
+		{
+			if (!myView().IsNull())
+			{
+
+				auto ret = myView()->Camera()->Center();
+				Vector3d v;
+				v.X = ret.X();
+				v.Y = ret.Y();
+				v.Z = ret.Z();
+				return v;
+			}
+
+			return {};
+		}
+
+		Nullable<Vector3d>  GetUp()
+		{
+			if (!myView().IsNull())
+			{
+
+				auto ret = myView()->Camera()->Up();
+				Vector3d v;
+				v.X = ret.X();
+				v.Y = ret.Y();
+				v.Z = ret.Z();
+				return v;
+			}
+			return {};
+		}
+
+		/// <summary>
+		///Select by rectangle
+		/// </summary>
+		void Select(int theX1, int theY1, int theX2, int theY2)
+		{
+			if (!myAISContext().IsNull())
+			{
+				myAISContext()->SelectRectangle(Graphic3d_Vec2i(theX1, theY1),
+					Graphic3d_Vec2i(theX2, theY2),
+					myView());
+				myAISContext()->UpdateCurrentViewer();
+			}
+		}
+
+		/// <summary>
+		///Select by click
+		/// </summary>
+		void Select(bool xorSelect)
+		{
+			if (myAISContext().IsNull())
+				return;
+
+			if (xorSelect)
+				myAISContext()->SelectDetected(AIS_SelectionScheme_XOR);
+			else
+				myAISContext()->SelectDetected(AIS_SelectionScheme_Replace);
+
+			myAISContext()->UpdateCurrentViewer();
+
+		}
+
+		/// <summary>
+		///Move view
+		/// </summary>
+		void MoveTo(int theX, int theY)
+		{
+			if ((!myAISContext().IsNull()) && (!myView().IsNull()))
+			{
+				myAISContext()->MoveTo(theX, theY, myView(), Standard_True);
+			}
+		}
+
+		/// <summary>
+		///Select by rectangle with pressed "Shift" key
+		/// </summary>
+		void ShiftSelect(int theX1, int theY1, int theX2, int theY2)
+		{
+			if ((!myAISContext().IsNull()) && (!myView().IsNull()))
+			{
+				myAISContext()->SelectRectangle(Graphic3d_Vec2i(theX1, theY1),
+					Graphic3d_Vec2i(theX2, theY2),
+					myView(),
+					AIS_SelectionScheme_XOR);
+				myAISContext()->UpdateCurrentViewer();
+			}
+		}
+
+		/// <summary>
+		///Select by "Shift" key
+		/// </summary>
+		void ShiftSelect(void)
+		{
+			if (!myAISContext().IsNull())
+			{
+				myAISContext()->SelectDetected(AIS_SelectionScheme_XOR);
+				myAISContext()->UpdateCurrentViewer();
+			}
+		}
+
+		/// <summary>
+		///Set background color
+		/// </summary>
+		void BackgroundColor(int& theRed, int& theGreen, int& theBlue)
+		{
+			Standard_Real R1;
+			Standard_Real G1;
+			Standard_Real B1;
+			if (!myView().IsNull())
+			{
+				myView()->BackgroundColor(Quantity_TOC_RGB, R1, G1, B1);
+			}
+			theRed = (int)R1 * 255;
+			theGreen = (int)G1 * 255;
+			theBlue = (int)B1 * 255;
+		}
+
+		/// <summary>
+		///Get background color Red
+		/// </summary>
+		int GetBGColR(void)
+		{
+
+			int aRed, aGreen, aBlue;
+			BackgroundColor(aRed, aGreen, aBlue);
+			return aRed;
+		}
+
+		/// <summary>
+		///Get background color Green
+		/// </summary>
+		int GetBGColG(void)
+		{
+			int aRed, aGreen, aBlue;
+			BackgroundColor(aRed, aGreen, aBlue);
+			return aGreen;
+		}
+
+		/// <summary>
+		///Get background color Blue
+		/// </summary>
+		int GetBGColB(void)
+		{
+			int aRed, aGreen, aBlue;
+			BackgroundColor(aRed, aGreen, aBlue);
+			return aBlue;
+		}
+
+		/// <summary>
+		///Update current viewer
+		/// </summary>
+		void UpdateCurrentViewer(void)
+		{
+			if (!myAISContext().IsNull())
+			{
+				myAISContext()->UpdateCurrentViewer();
+			}
+		}
+
+		/// <summary>
+		///Front side
+		/// </summary>
+		void FrontView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_Yneg);
+			}
+		}
+
+		/// <summary>
+		///Top side
+		/// </summary>
+		void TopView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_Zpos);
+			}
+		}
+
+		/// <summary>
+		///Left side
+		/// </summary>
+		void LeftView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_Xneg);
+			}
+		}
+
+		/// <summary>
+		///Back side
+		/// </summary>
+		void BackView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_Ypos);
+			}
+		}
+
+		/// <summary>
+		///Right side
+		/// </summary>
+		void RightView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_Xpos);
+			}
+		}
+
+		/// <summary>
+		///Bottom side
+		/// </summary>
+		void BottomView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_Zneg);
+			}
+		}
+
+		/// <summary>
+		///Axo side
+		/// </summary>
+		void AxoView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetProj(V3d_XposYnegZpos);
+			}
+		}
+
+		/// <summary>
+		///Scale
+		/// </summary>
+		float Scale(void)
+		{
+			if (myView().IsNull())
+			{
+				return -1;
+			}
+			else
+			{
+				return (float)myView()->Scale();
+			}
+		}
+
+		/// <summary>
+		///Zoom in all view
+		/// </summary>
+		void ZoomAllView(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->FitAll();
+				myView()->ZFitAll();
+			}
+		}
+
+		/// <summary>
+		///Reset view
+		/// </summary>
+		void Reset(void)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->Reset();
+			}
+		}
+
+		void ShowCube() {
+			auto cube = new AIS_ViewCube();
+			cube->SetDrawAxes(true);
+			cube->SetSize(40);
+			cube->SetBoxFacetExtension(100 * 0.1);
+
+			cube->SetResetCamera(true);
+			cube->SetFitSelected(false);
+
+
+			//cube->SetViewAnimation();
+			cube->SetDuration(0.5);
+
+			myAISContext()->Display(cube, false);
+		}
+		void ActivateGrid(bool en) {
+			if (en)
+				myViewer()->ActivateGrid(Aspect_GT_Rectangular, Aspect_GDM_Lines);
+			else
+				myViewer()->DeactivateGrid();
+		}
+		/// <summary>
+		///Set display mode of objects
+		/// </summary>
+		/// <param name="theMode">Set current mode</param>
+		void SetDisplayMode(int theMode)
+		{
+			if (myAISContext().IsNull())
+			{
+
+				return;
+			}
+			AIS_DisplayMode aCurrentMode;
+			if (theMode == 0)
+			{
+				aCurrentMode = AIS_WireFrame;
+			}
+			else
+			{
+				aCurrentMode = AIS_Shaded;
+			}
+
+			if (myAISContext()->NbSelected() == 0)
+			{
+				myAISContext()->SetDisplayMode(aCurrentMode, Standard_False);
+			}
+			else
+			{
+				for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+				{
+					myAISContext()->SetDisplayMode(myAISContext()->SelectedInteractive(), theMode, Standard_False);
+				}
+			}
 			myAISContext()->UpdateCurrentViewer();
 		}
-	}
 
-	/// <summary>
-	///Select by click
-	/// </summary>
-	void Select(bool xorSelect)
-	{
-		if (myAISContext().IsNull())
-			return;
-
-		if (xorSelect)
-			myAISContext()->SelectDetected(AIS_SelectionScheme_XOR);
-		else
-			myAISContext()->SelectDetected(AIS_SelectionScheme_Replace);
-
-		myAISContext()->UpdateCurrentViewer();
-
-	}
-
-	/// <summary>
-	///Move view
-	/// </summary>
-	void MoveTo(int theX, int theY)
-	{
-		if ((!myAISContext().IsNull()) && (!myView().IsNull()))
+		/// <summary>
+		///Set color
+		/// </summary>
+		void SetColor(int theR, int theG, int theB)
 		{
-			myAISContext()->MoveTo(theX, theY, myView(), Standard_True);
-		}
-	}
-
-	/// <summary>
-	///Select by rectangle with pressed "Shift" key
-	/// </summary>
-	void ShiftSelect(int theX1, int theY1, int theX2, int theY2)
-	{
-		if ((!myAISContext().IsNull()) && (!myView().IsNull()))
-		{
-			myAISContext()->SelectRectangle(Graphic3d_Vec2i(theX1, theY1),
-				Graphic3d_Vec2i(theX2, theY2),
-				myView(),
-				AIS_SelectionScheme_XOR);
+			if (myAISContext().IsNull())
+			{
+				return;
+			}
+			Quantity_Color aCol = Quantity_Color(theR / 255., theG / 255., theB / 255., Quantity_TOC_RGB);
+			for (; myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+			{
+				myAISContext()->SetColor(myAISContext()->SelectedInteractive(), aCol, Standard_False);
+			}
 			myAISContext()->UpdateCurrentViewer();
 		}
-	}
 
-	/// <summary>
-	///Select by "Shift" key
-	/// </summary>
-	void ShiftSelect(void)
-	{
-		if (!myAISContext().IsNull())
+		/// <summary>
+		///Get object color red
+		/// </summary>
+		int GetObjColR(void)
 		{
-			myAISContext()->SelectDetected(AIS_SelectionScheme_XOR);
-			myAISContext()->UpdateCurrentViewer();
-		}
-	}
-
-	/// <summary>
-	///Set background color
-	/// </summary>
-	void BackgroundColor(int& theRed, int& theGreen, int& theBlue)
-	{
-		Standard_Real R1;
-		Standard_Real G1;
-		Standard_Real B1;
-		if (!myView().IsNull())
-		{
-			myView()->BackgroundColor(Quantity_TOC_RGB, R1, G1, B1);
-		}
-		theRed = (int)R1 * 255;
-		theGreen = (int)G1 * 255;
-		theBlue = (int)B1 * 255;
-	}
-
-	/// <summary>
-	///Get background color Red
-	/// </summary>
-	int GetBGColR(void)
-	{
-
-		int aRed, aGreen, aBlue;
-		BackgroundColor(aRed, aGreen, aBlue);
-		return aRed;
-	}
-
-	/// <summary>
-	///Get background color Green
-	/// </summary>
-	int GetBGColG(void)
-	{
-		int aRed, aGreen, aBlue;
-		BackgroundColor(aRed, aGreen, aBlue);
-		return aGreen;
-	}
-
-	/// <summary>
-	///Get background color Blue
-	/// </summary>
-	int GetBGColB(void)
-	{
-		int aRed, aGreen, aBlue;
-		BackgroundColor(aRed, aGreen, aBlue);
-		return aBlue;
-	}
-
-	/// <summary>
-	///Update current viewer
-	/// </summary>
-	void UpdateCurrentViewer(void)
-	{
-		if (!myAISContext().IsNull())
-		{
-			myAISContext()->UpdateCurrentViewer();
-		}
-	}
-
-	/// <summary>
-	///Front side
-	/// </summary>
-	void FrontView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_Yneg);
-		}
-	}
-
-	/// <summary>
-	///Top side
-	/// </summary>
-	void TopView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_Zpos);
-		}
-	}
-
-	/// <summary>
-	///Left side
-	/// </summary>
-	void LeftView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_Xneg);
-		}
-	}
-
-	/// <summary>
-	///Back side
-	/// </summary>
-	void BackView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_Ypos);
-		}
-	}
-
-	/// <summary>
-	///Right side
-	/// </summary>
-	void RightView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_Xpos);
-		}
-	}
-
-	/// <summary>
-	///Bottom side
-	/// </summary>
-	void BottomView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_Zneg);
-		}
-	}
-
-	/// <summary>
-	///Axo side
-	/// </summary>
-	void AxoView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetProj(V3d_XposYnegZpos);
-		}
-	}
-
-	/// <summary>
-	///Scale
-	/// </summary>
-	float Scale(void)
-	{
-		if (myView().IsNull())
-		{
-			return -1;
-		}
-		else
-		{
-			return (float)myView()->Scale();
-		}
-	}
-
-	/// <summary>
-	///Zoom in all view
-	/// </summary>
-	void ZoomAllView(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->FitAll();
-			myView()->ZFitAll();
-		}
-	}
-
-	/// <summary>
-	///Reset view
-	/// </summary>
-	void Reset(void)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->Reset();
-		}
-	}
-
-	void ShowCube() {
-		auto cube = new AIS_ViewCube();
-		cube->SetDrawAxes(true);
-		cube->SetSize(40);
-		cube->SetBoxFacetExtension(100 * 0.1);
-
-		cube->SetResetCamera(true);
-		cube->SetFitSelected(false);
-
-
-		//cube->SetViewAnimation();
-		cube->SetDuration(0.5);
-
-		myAISContext()->Display(cube, false);
-	}
-	void ActivateGrid(bool en) {
-		if (en)
-			myViewer()->ActivateGrid(Aspect_GT_Rectangular, Aspect_GDM_Lines);
-		else
-			myViewer()->DeactivateGrid();
-	}
-	/// <summary>
-	///Set display mode of objects
-	/// </summary>
-	/// <param name="theMode">Set current mode</param>
-	void SetDisplayMode(int theMode)
-	{
-		if (myAISContext().IsNull())
-		{
-
-			return;
-		}
-		AIS_DisplayMode aCurrentMode;
-		if (theMode == 0)
-		{
-			aCurrentMode = AIS_WireFrame;
-		}
-		else
-		{
-			aCurrentMode = AIS_Shaded;
+			int aRed, aGreen, aBlue;
+			ObjectColor(aRed, aGreen, aBlue);
+			return aRed;
 		}
 
-		if (myAISContext()->NbSelected() == 0)
+		/// <summary>
+		///Get object color green
+		/// </summary>
+		int GetObjColG(void)
 		{
-			myAISContext()->SetDisplayMode(aCurrentMode, Standard_False);
+			int aRed, aGreen, aBlue;
+			ObjectColor(aRed, aGreen, aBlue);
+			return aGreen;
 		}
-		else
+
+		/// <summary>
+		///Get object color R/G/B
+		/// </summary>
+		void ObjectColor(int& theRed, int& theGreen, int& theBlue)
 		{
+			if (myAISContext().IsNull())
+			{
+				return;
+			}
+			theRed = 255;
+			theGreen = 255;
+			theBlue = 255;
+			Handle(AIS_InteractiveObject) aCurrent;
+			myAISContext()->InitSelected();
+			if (!myAISContext()->MoreSelected())
+			{
+				return;
+			}
+			aCurrent = myAISContext()->SelectedInteractive();
+			if (aCurrent->HasColor())
+			{
+				Quantity_Color anObjCol;
+				myAISContext()->Color(aCurrent, anObjCol);
+				Standard_Real r1, r2, r3;
+				anObjCol.Values(r1, r2, r3, Quantity_TOC_RGB);
+				theRed = (int)r1 * 255;
+				theGreen = (int)r2 * 255;
+				theBlue = (int)r3 * 255;
+			}
+		}
+
+		/// <summary>
+		///Get object color blue
+		/// </summary>
+		int GetObjColB(void)
+		{
+			int aRed, aGreen, aBlue;
+			ObjectColor(aRed, aGreen, aBlue);
+			return aBlue;
+		}
+
+		/// <summary>
+		///Set background color R/G/B
+		/// </summary>
+		void SetBackgroundColor(int theRed, int theGreen, int theBlue)
+		{
+			if (!myView().IsNull())
+			{
+				myView()->SetBackgroundColor(Quantity_TOC_RGB, theRed / 255., theGreen / 255., theBlue / 255.);
+			}
+		}
+
+		void SetBackgroundColor(int red1, int green1, int blue1, int red2, int green2, int blue2) {
+			myView()->SetBgGradientColors(
+				Quantity_Color(red1 / 255., green1 / 255., blue1 / 255., Quantity_TOC_RGB),
+				Quantity_Color(red2 / 255., green2 / 255., blue2 / 255., Quantity_TOC_RGB),
+				Aspect_GFM_DIAG2);
+		}
+
+		/// <summary>
+		///Erase objects
+		/// </summary>
+		void EraseObjects(void)
+		{
+			if (myAISContext().IsNull())
+			{
+				return;
+			}
+
+			myAISContext()->EraseSelected(Standard_False);
+			myAISContext()->ClearSelected(Standard_True);
+		}
+
+		/// <summary>
+		///Get version
+		/// </summary>
+		float GetOCCVersion(void)
+		{
+			return (float)OCC_VERSION;
+		}
+
+		/// <summary>
+		///set material
+		/// </summary>
+		void SetMaterial(int theMaterial)
+		{
+			if (myAISContext().IsNull())
+			{
+				return;
+			}
 			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
 			{
-				myAISContext()->SetDisplayMode(myAISContext()->SelectedInteractive(), theMode, Standard_False);
+				myAISContext()->SetMaterial(myAISContext()->SelectedInteractive(), (Graphic3d_NameOfMaterial)theMaterial, Standard_False);
 			}
-		}
-		myAISContext()->UpdateCurrentViewer();
-	}
-
-	/// <summary>
-	///Set color
-	/// </summary>
-	void SetColor(int theR, int theG, int theB)
-	{
-		if (myAISContext().IsNull())
-		{
-			return;
-		}
-		Quantity_Color aCol = Quantity_Color(theR / 255., theG / 255., theB / 255., Quantity_TOC_RGB);
-		for (; myAISContext()->MoreSelected(); myAISContext()->NextSelected())
-		{
-			myAISContext()->SetColor(myAISContext()->SelectedInteractive(), aCol, Standard_False);
-		}
-		myAISContext()->UpdateCurrentViewer();
-	}
-
-	/// <summary>
-	///Get object color red
-	/// </summary>
-	int GetObjColR(void)
-	{
-		int aRed, aGreen, aBlue;
-		ObjectColor(aRed, aGreen, aBlue);
-		return aRed;
-	}
-
-	/// <summary>
-	///Get object color green
-	/// </summary>
-	int GetObjColG(void)
-	{
-		int aRed, aGreen, aBlue;
-		ObjectColor(aRed, aGreen, aBlue);
-		return aGreen;
-	}
-
-	/// <summary>
-	///Get object color R/G/B
-	/// </summary>
-	void ObjectColor(int& theRed, int& theGreen, int& theBlue)
-	{
-		if (myAISContext().IsNull())
-		{
-			return;
-		}
-		theRed = 255;
-		theGreen = 255;
-		theBlue = 255;
-		Handle(AIS_InteractiveObject) aCurrent;
-		myAISContext()->InitSelected();
-		if (!myAISContext()->MoreSelected())
-		{
-			return;
-		}
-		aCurrent = myAISContext()->SelectedInteractive();
-		if (aCurrent->HasColor())
-		{
-			Quantity_Color anObjCol;
-			myAISContext()->Color(aCurrent, anObjCol);
-			Standard_Real r1, r2, r3;
-			anObjCol.Values(r1, r2, r3, Quantity_TOC_RGB);
-			theRed = (int)r1 * 255;
-			theGreen = (int)r2 * 255;
-			theBlue = (int)r3 * 255;
-		}
-	}
-
-	/// <summary>
-	///Get object color blue
-	/// </summary>
-	int GetObjColB(void)
-	{
-		int aRed, aGreen, aBlue;
-		ObjectColor(aRed, aGreen, aBlue);
-		return aBlue;
-	}
-
-	/// <summary>
-	///Set background color R/G/B
-	/// </summary>
-	void SetBackgroundColor(int theRed, int theGreen, int theBlue)
-	{
-		if (!myView().IsNull())
-		{
-			myView()->SetBackgroundColor(Quantity_TOC_RGB, theRed / 255., theGreen / 255., theBlue / 255.);
-		}
-	}
-
-	void SetBackgroundColor(int red1, int green1, int blue1, int red2, int green2, int blue2) {
-		myView()->SetBgGradientColors(
-			Quantity_Color(red1 / 255., green1 / 255., blue1 / 255., Quantity_TOC_RGB),
-			Quantity_Color(red2 / 255., green2 / 255., blue2 / 255., Quantity_TOC_RGB),
-			Aspect_GFM_DIAG2);
-	}
-
-	/// <summary>
-	///Erase objects
-	/// </summary>
-	void EraseObjects(void)
-	{
-		if (myAISContext().IsNull())
-		{
-			return;
+			myAISContext()->UpdateCurrentViewer();
 		}
 
-		myAISContext()->EraseSelected(Standard_False);
-		myAISContext()->ClearSelected(Standard_True);
-	}
-
-	/// <summary>
-	///Get version
-	/// </summary>
-	float GetOCCVersion(void)
-	{
-		return (float)OCC_VERSION;
-	}
-
-	/// <summary>
-	///set material
-	/// </summary>
-	void SetMaterial(int theMaterial)
-	{
-		if (myAISContext().IsNull())
+		/// <summary>
+		///set transparency
+		/// </summary>
+		void SetTransparency(IManagedObjHandle^ h, double theTrans)
 		{
-			return;
+			if (myAISContext().IsNull())
+				return;
+
+			auto o = impl->findObject(h->BindId);
+			myAISContext()->SetTransparency(o, theTrans, AutoViewerUpdate);
 		}
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+
+		void SetAutoViewerUpdate(bool v)
 		{
-			myAISContext()->SetMaterial(myAISContext()->SelectedInteractive(), (Graphic3d_NameOfMaterial)theMaterial, Standard_False);
+			AutoViewerUpdate = v;
 		}
-		myAISContext()->UpdateCurrentViewer();
-	}
 
-	/// <summary>
-	///set transparency
-	/// </summary>
-	void SetTransparency(ManagedObjHandle^ h, double theTrans)
-	{
-		if (myAISContext().IsNull())
-			return;
-
-		auto o = impl->findObject(h->BindId);
-		myAISContext()->SetTransparency(o, theTrans, AutoViewerUpdate);
-	}
-
-	void SetAutoViewerUpdate(bool v)
-	{
-		AutoViewerUpdate = v;
-	}
-
-	/// <summary>
-	///set color
-	/// </summary>
-	void SetColor(ManagedObjHandle^ h, int red, int green, int blue)
-	{
-		if (myAISContext().IsNull())
-			return;
-
-		auto o = impl->findObject(h->BindId);
-		Quantity_Color c(red / 255., green / 255., blue / 255., Quantity_TOC_RGB);
-		myAISContext()->SetColor(o, c, AutoViewerUpdate);
-	}
-
-	/// <summary>
-	///set transparency
-	/// </summary>
-	void SetTransparency(int theTrans)
-	{
-		if (myAISContext().IsNull())
+		/// <summary>
+		///set color
+		/// </summary>
+		void SetColor(IManagedObjHandle^ h, int red, int green, int blue)
 		{
-			return;
+			if (myAISContext().IsNull())
+				return;
+
+			auto o = impl->findObject(h->BindId);
+			Quantity_Color c(red / 255., green / 255., blue / 255., Quantity_TOC_RGB);
+			myAISContext()->SetColor(o, c, AutoViewerUpdate);
 		}
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
-		{
-			myAISContext()->SetTransparency(myAISContext()->SelectedInteractive(), ((Standard_Real)theTrans) / 10.0, Standard_False);
-		}
-		myAISContext()->UpdateCurrentViewer();
-	}
 
-	/// <summary>
-	///Return true if object is selected
-	/// </summary>
-	bool IsObjectSelected(void)
-	{
-		if (myAISContext().IsNull())
+		/// <summary>
+		///set transparency
+		/// </summary>
+		void SetTransparency(int theTrans)
 		{
-			return false;
-		}
-		myAISContext()->InitSelected();
-		return myAISContext()->MoreSelected() != Standard_False;
-	}
-
-	/// <summary>
-	///Return display mode
-	/// </summary>
-	int DisplayMode(void)
-	{
-		if (myAISContext().IsNull())
-		{
-			return -1;
-		}
-		int aMode = -1;
-		bool OneOrMoreInShading = false;
-		bool OneOrMoreInWireframe = false;
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
-		{
-			if (myAISContext()->IsDisplayed(myAISContext()->SelectedInteractive(), 1))
+			if (myAISContext().IsNull())
 			{
-				OneOrMoreInShading = true;
+				return;
 			}
-			if (myAISContext()->IsDisplayed(myAISContext()->SelectedInteractive(), 0))
+			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
 			{
-				OneOrMoreInWireframe = true;
+				myAISContext()->SetTransparency(myAISContext()->SelectedInteractive(), ((Standard_Real)theTrans) / 10.0, Standard_False);
 			}
+			myAISContext()->UpdateCurrentViewer();
 		}
-		if (OneOrMoreInShading && OneOrMoreInWireframe)
+
+		/// <summary>
+		///Return true if object is selected
+		/// </summary>
+		bool IsObjectSelected(void)
 		{
-			aMode = 10;
-		}
-		else if (OneOrMoreInShading)
-		{
-			aMode = 1;
-		}
-		else if (OneOrMoreInWireframe)
-		{
-			aMode = 0;
-		}
-
-		return aMode;
-	}
-
-	/// <summary>
-	///Create new view
-	/// </summary>
-	/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
-	void CreateNewView(System::IntPtr theWnd)
-	{
-		if (myAISContext().IsNull())
-		{
-			return;
-		}
-		myView() = myAISContext()->CurrentViewer()->CreateView();
-		if (myGraphicDriver().IsNull())
-		{
-			myGraphicDriver() = new OpenGl_GraphicDriver(Handle(Aspect_DisplayConnection)());
-		}
-		Handle(WNT_Window) aWNTWindow = new WNT_Window(reinterpret_cast<HWND> (theWnd.ToPointer()));
-		myView()->SetWindow(aWNTWindow);
-		Standard_Integer w = 100, h = 100;
-		aWNTWindow->Size(w, h);
-		if (!aWNTWindow->IsMapped())
-		{
-			aWNTWindow->Map();
-		}
-	}
-
-	/// <summary>
-	///Set AISContext
-	/// </summary>
-	bool SetAISContext(OCCTProxy^ theViewer)
-	{
-		this->myAISContext() = theViewer->GetContext();
-		if (myAISContext().IsNull())
-		{
-			return false;
-		}
-		return true;
-	}
-
-	/// <summary>
-	///Get AISContext
-	/// </summary>
-	Handle(AIS_InteractiveContext) GetContext(void)
-	{
-		return myAISContext();
-	}
-
-public:
-	// ============================================
-	// Import / export functionality
-	// ============================================
-
-	/// <summary>
-	///Import BRep file
-	/// </summary>
-	/// <param name="theFileName">Name of import file</param>
-	bool ImportBrep(System::String^ theFileName)
-	{
-		return ImportBrep(toAsciiString(theFileName));
-	}
-
-	/// <summary>
-	///Import BRep file
-	/// </summary>
-	/// <param name="theFileName">Name of import file</param>
-	bool ImportBrep(const TCollection_AsciiString& theFileName)
-	{
-		TopoDS_Shape aShape;
-		BRep_Builder aBuilder;
-		Standard_Boolean isResult = BRepTools::Read(aShape, theFileName.ToCString(), aBuilder);
-		if (!isResult)
-		{
-			return false;
-		}
-
-		myAISContext()->Display(new AIS_Shape(aShape), Standard_True);
-		return true;
-	}
-	//#include <msclr/marshal_cppstd.h>
-
-	List<ManagedObjHandle^>^ ImportStep(System::String^ str)
-	{
-		const TCollection_AsciiString aFilename = toAsciiString(str);
-		return ImportStep(aFilename);
-	}
-
-
-
-	List<ManagedObjHandle^>^ ImportStep(System::String^ name, List<System::Byte>^ bts)
-	{
-		auto buf = new uint8_t[bts->Count];
-		for (int i = 0; i < bts->Count; i++) {
-			buf[i] = bts[i];
-		}
-		memstream s(buf, bts->Count);
-
-		//char b;
-
-		/*do {
-			s.read(&b, 1);
-			std::cout << "read: " << (int)b << std::endl;
-		} while (s.good());*/
-
-		const TCollection_AsciiString aFilename = toAsciiString(name);
-		return ImportStep(aFilename, s);
-	}
-
-	List<ManagedObjHandle^>^ ImportIges(System::String^ str)
-	{
-		const TCollection_AsciiString aFilename = toAsciiString(str);
-		return ImportIges(aFilename);
-	}
-
-	/// <summary>
-	///Import Step file
-	/// </summary>
-	/// <param name="theFileName">Name of import file</param>
-	List<ManagedObjHandle^>^ ImportStep(const TCollection_AsciiString& theFileName)
-	{
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-		STEPControl_Reader aReader;
-
-		IFSelect_ReturnStatus aStatus = aReader.ReadFile(theFileName.ToCString());
-		if (aStatus == IFSelect_RetDone)
-		{
-			bool isFailsonly = false;
-			aReader.PrintCheckLoad(isFailsonly, IFSelect_ItemsByEntity);
-
-			int aNbRoot = aReader.NbRootsForTransfer();
-			aReader.PrintCheckTransfer(isFailsonly, IFSelect_ItemsByEntity);
-			for (Standard_Integer n = 1; n <= aNbRoot; n++)
+			if (myAISContext().IsNull())
 			{
-				Standard_Boolean ok = aReader.TransferRoot(n);
-				int aNbShap = aReader.NbShapes();
-				if (aNbShap > 0)
+				return false;
+			}
+			myAISContext()->InitSelected();
+			return myAISContext()->MoreSelected() != Standard_False;
+		}
+
+		/// <summary>
+		///Return display mode
+		/// </summary>
+		int DisplayMode(void)
+		{
+			if (myAISContext().IsNull())
+			{
+				return -1;
+			}
+			int aMode = -1;
+			bool OneOrMoreInShading = false;
+			bool OneOrMoreInWireframe = false;
+			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+			{
+				if (myAISContext()->IsDisplayed(myAISContext()->SelectedInteractive(), 1))
 				{
-					for (int i = 1; i <= aNbShap; i++)
-					{
-						TopoDS_Shape aShape = aReader.Shape(i);
-
-						auto ais = new AIS_Shape(aShape);
-
-
-						ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-						auto hn = GetHandle(*ais);
-						hhh->FromObjHandle(hn);
-						ret->Add(hhh);
-
-						myAISContext()->Display(ais, Standard_False);
-					}
-
-					myAISContext()->UpdateCurrentViewer();
+					OneOrMoreInShading = true;
+				}
+				if (myAISContext()->IsDisplayed(myAISContext()->SelectedInteractive(), 0))
+				{
+					OneOrMoreInWireframe = true;
 				}
 			}
-		}
-		/*else
-		{
-			return false;
-		}*/
-
-		return ret;
-	}
-
-	/// <summary>
-	///Import Step stream
-	/// </summary>
-	/// <param name="theFileName">Name of import file</param>
-	List<ManagedObjHandle^>^ ImportStep(const TCollection_AsciiString& name, std::istream& stream)
-	{
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-		STEPControl_Reader aReader;
-		IFSelect_ReturnStatus aStatus = aReader.ReadStream(name.ToCString(), stream);
-
-		if (aStatus == IFSelect_RetDone)
-		{
-			bool isFailsonly = false;
-			aReader.PrintCheckLoad(isFailsonly, IFSelect_ItemsByEntity);
-
-			int aNbRoot = aReader.NbRootsForTransfer();
-			aReader.PrintCheckTransfer(isFailsonly, IFSelect_ItemsByEntity);
-			for (Standard_Integer n = 1; n <= aNbRoot; n++)
+			if (OneOrMoreInShading && OneOrMoreInWireframe)
 			{
-				Standard_Boolean ok = aReader.TransferRoot(n);
-				int aNbShap = aReader.NbShapes();
-				if (aNbShap > 0)
-				{
-					for (int i = 1; i <= aNbShap; i++)
-					{
-						TopoDS_Shape aShape = aReader.Shape(i);
+				aMode = 10;
+			}
+			else if (OneOrMoreInShading)
+			{
+				aMode = 1;
+			}
+			else if (OneOrMoreInWireframe)
+			{
+				aMode = 0;
+			}
 
-						auto ais = new AIS_Shape(aShape);
+			return aMode;
+		}
 
-
-						ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-						auto hn = GetHandle(*ais);
-						hhh->FromObjHandle(hn);
-						ret->Add(hhh);
-
-						myAISContext()->Display(ais, Standard_False);
-					}
-
-					//myAISContext()->UpdateCurrentViewer();
-				}
+		/// <summary>
+		///Create new view
+		/// </summary>
+		/// <param name="theWnd">System.IntPtr that contains the window handle (HWND) of the control</param>
+		void CreateNewView(System::IntPtr theWnd)
+		{
+			if (myAISContext().IsNull())
+			{
+				return;
+			}
+			myView() = myAISContext()->CurrentViewer()->CreateView();
+			if (myGraphicDriver().IsNull())
+			{
+				myGraphicDriver() = new OpenGl_GraphicDriver(Handle(Aspect_DisplayConnection)());
+			}
+			Handle(WNT_Window) aWNTWindow = new WNT_Window(reinterpret_cast<HWND> (theWnd.ToPointer()));
+			myView()->SetWindow(aWNTWindow);
+			Standard_Integer w = 100, h = 100;
+			aWNTWindow->Size(w, h);
+			if (!aWNTWindow->IsMapped())
+			{
+				aWNTWindow->Map();
 			}
 		}
-		/*else
+
+		/// <summary>
+		///Set AISContext
+		/// </summary>
+		bool SetAISContext(OCCTProxy^ theViewer)
 		{
-			return false;
-		}*/
+			this->myAISContext() = theViewer->GetContext();
+			if (myAISContext().IsNull())
+			{
+				return false;
+			}
+			return true;
+		}
 
-		return ret;
-	}
-
-	/// <summary>
-	///Import Iges file
-	/// </summary>
-	/// <param name="theFileName">Name of import file</param>
-	List<ManagedObjHandle^>^ ImportIges(const TCollection_AsciiString& theFileName)
-	{
-		List<ManagedObjHandle^>^ ret = gcnew List<ManagedObjHandle^>();
-
-		IGESControl_Reader aReader;
-		int aStatus = aReader.ReadFile(theFileName.ToCString());
-
-		if (aStatus == IFSelect_RetDone)
+		/// <summary>
+		///Get AISContext
+		/// </summary>
+		Handle(AIS_InteractiveContext) GetContext(void)
 		{
-			aReader.TransferRoots();
-			TopoDS_Shape aShape = aReader.OneShape();
-			auto ais = new AIS_Shape(aShape);
+			return myAISContext();
+		}
+
+	public:
+		// ============================================
+		// Import / export functionality
+		// ============================================
+
+		/// <summary>
+		///Import BRep file
+		/// </summary>
+		/// <param name="theFileName">Name of import file</param>
+		bool ImportBrep(System::String^ theFileName)
+		{
+			return ImportBrep(toAsciiString(theFileName));
+		}
+
+		/// <summary>
+		///Import BRep file
+		/// </summary>
+		/// <param name="theFileName">Name of import file</param>
+		bool ImportBrep(const TCollection_AsciiString& theFileName)
+		{
+			TopoDS_Shape aShape;
+			BRep_Builder aBuilder;
+			Standard_Boolean isResult = BRepTools::Read(aShape, theFileName.ToCString(), aBuilder);
+			if (!isResult)
+			{
+				return false;
+			}
+
+			myAISContext()->Display(new AIS_Shape(aShape), Standard_True);
+			return true;
+		}
+		//#include <msclr/marshal_cppstd.h>
+
+		List<IManagedObjHandle^>^ ImportStep(System::String^ str)
+		{
+			const TCollection_AsciiString aFilename = toAsciiString(str);
+			return ImportStep(aFilename);
+		}
+
+
+
+		List<IManagedObjHandle^>^ ImportStep(System::String^ name, List<System::Byte>^ bts)
+		{
+			auto buf = new uint8_t[bts->Count];
+			for (int i = 0; i < bts->Count; i++) {
+				buf[i] = bts[i];
+			}
+			memstream s(buf, bts->Count);
+
+			//char b;
+
+			/*do {
+				s.read(&b, 1);
+				std::cout << "read: " << (int)b << std::endl;
+			} while (s.good());*/
+
+			const TCollection_AsciiString aFilename = toAsciiString(name);
+			return ImportStep(aFilename, s);
+		}
+
+		List<IManagedObjHandle^>^ ImportIges(System::String^ str)
+		{
+			const TCollection_AsciiString aFilename = toAsciiString(str);
+			return ImportIges(aFilename);
+		}
+
+		/// <summary>
+		///Import Step file
+		/// </summary>
+		/// <param name="theFileName">Name of import file</param>
+		List<IManagedObjHandle^>^ ImportStep(const TCollection_AsciiString& theFileName)
+		{
+			List<IManagedObjHandle^>^ ret = gcnew List<IManagedObjHandle^>();
+			STEPControl_Reader aReader;
+
+			IFSelect_ReturnStatus aStatus = aReader.ReadFile(theFileName.ToCString());
+			if (aStatus == IFSelect_RetDone)
+			{
+				bool isFailsonly = false;
+				aReader.PrintCheckLoad(isFailsonly, IFSelect_ItemsByEntity);
+
+				int aNbRoot = aReader.NbRootsForTransfer();
+				aReader.PrintCheckTransfer(isFailsonly, IFSelect_ItemsByEntity);
+				for (Standard_Integer n = 1; n <= aNbRoot; n++)
+				{
+					Standard_Boolean ok = aReader.TransferRoot(n);
+					int aNbShap = aReader.NbShapes();
+					if (aNbShap > 0)
+					{
+						for (int i = 1; i <= aNbShap; i++)
+						{
+							TopoDS_Shape aShape = aReader.Shape(i);
+
+							auto ais = new AIS_Shape(aShape);
+
+
+							ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+							auto hn = GetHandle(*ais);
+							hhh->FromObjHandle(hn);
+							ret->Add(hhh);
+
+							myAISContext()->Display(ais, Standard_False);
+						}
+
+						myAISContext()->UpdateCurrentViewer();
+					}
+				}
+			}
+			/*else
+			{
+				return false;
+			}*/
+
+			return ret;
+		}
+
+		/// <summary>
+		///Import Step stream
+		/// </summary>
+		/// <param name="theFileName">Name of import file</param>
+		List<IManagedObjHandle^>^ ImportStep(const TCollection_AsciiString& name, std::istream& stream)
+		{
+			List<IManagedObjHandle^>^ ret = gcnew List<IManagedObjHandle^>();
+			STEPControl_Reader aReader;
+			IFSelect_ReturnStatus aStatus = aReader.ReadStream(name.ToCString(), stream);
+
+			if (aStatus == IFSelect_RetDone)
+			{
+				bool isFailsonly = false;
+				aReader.PrintCheckLoad(isFailsonly, IFSelect_ItemsByEntity);
+
+				int aNbRoot = aReader.NbRootsForTransfer();
+				aReader.PrintCheckTransfer(isFailsonly, IFSelect_ItemsByEntity);
+				for (Standard_Integer n = 1; n <= aNbRoot; n++)
+				{
+					Standard_Boolean ok = aReader.TransferRoot(n);
+					int aNbShap = aReader.NbShapes();
+					if (aNbShap > 0)
+					{
+						for (int i = 1; i <= aNbShap; i++)
+						{
+							TopoDS_Shape aShape = aReader.Shape(i);
+
+							auto ais = new AIS_Shape(aShape);
+
+
+							ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+							auto hn = GetHandle(*ais);
+							hhh->FromObjHandle(hn);
+							ret->Add(hhh);
+
+							myAISContext()->Display(ais, Standard_False);
+						}
+
+						//myAISContext()->UpdateCurrentViewer();
+					}
+				}
+			}
+			/*else
+			{
+				return false;
+			}*/
+
+			return ret;
+		}
+
+		/// <summary>
+		///Import Iges file
+		/// </summary>
+		/// <param name="theFileName">Name of import file</param>
+		List<IManagedObjHandle^>^ ImportIges(const TCollection_AsciiString& theFileName)
+		{
+			List<IManagedObjHandle^>^ ret = gcnew List<IManagedObjHandle^>();
+
+			IGESControl_Reader aReader;
+			int aStatus = aReader.ReadFile(theFileName.ToCString());
+
+			if (aStatus == IFSelect_RetDone)
+			{
+				aReader.TransferRoots();
+				TopoDS_Shape aShape = aReader.OneShape();
+				auto ais = new AIS_Shape(aShape);
+
+
+				ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+				auto hn = GetHandle(*ais);
+				hhh->FromObjHandle(hn);
+				ret->Add(hhh);
+
+				myAISContext()->Display(ais, Standard_False);
+
+
+			}
+			/*else
+			{
+				return false;
+			}*/
+
+			myAISContext()->UpdateCurrentViewer();
+			return ret;
+		}
+
+		/// <summary>
+		///Export BRep file
+		/// </summary>
+		/// <param name="theFileName">Name of export file</param>
+		bool ExportBRep(const TCollection_AsciiString& theFileName)
+		{
+			myAISContext()->InitSelected();
+			if (!myAISContext()->MoreSelected())
+			{
+				return false;
+			}
+
+			Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
+			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+			return BRepTools::Write(anIS->Shape(), theFileName.ToCString()) != Standard_False;
+		}
+
+		bool ExportStep(System::String^ str)
+		{
+			const TCollection_AsciiString aFilename = toAsciiString(str);
+			return ExportStep(aFilename);
+		}
+
+		bool ExportStep(ITopObjHandle^ h, System::String^ str)
+		{
+			const TCollection_AsciiString aFilename = toAsciiString(str);
+			return ExportStep(h, aFilename);
+		}
+
+		bool ExportStep(ITopObjHandle^ h, const TCollection_AsciiString& theFileName)
+		{
+			STEPControl_StepModelType aType = STEPControl_AsIs;
+			IFSelect_ReturnStatus aStatus;
+			STEPControl_Writer aWriter;
+			auto anIO = impl->findObject(h->BindId);
+
+			//auto anIO = impl->getObject(h);
+
+			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+			TopoDS_Shape aShape = anIS->Shape();
+
+			aShape = aShape.Located(anIS->LocalTransformation());
+			aStatus = aWriter.Transfer(aShape, aType);
+			if (aStatus != IFSelect_RetDone)
+			{
+				return false;
+			}
+
+			aStatus = aWriter.Write(theFileName.ToCString());
+			if (aStatus != IFSelect_RetDone)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		/// <summary>
+		///Export Step file
+		/// </summary>
+		/// <param name="theFileName">Name of export file</param>
+		List<System::Byte>^ ExportStepStream(ITopObjHandle^ h)
+		{
+			STEPControl_StepModelType aType = STEPControl_AsIs;
+			IFSelect_ReturnStatus aStatus;
+			STEPControl_Writer aWriter;
+
+			//auto anIO = impl->getObject(h);
+			auto o = impl->findObject(h->BindId);
+			auto anIO = o;
+
+			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+			TopoDS_Shape aShape = anIS->Shape();
+			aStatus = aWriter.Transfer(aShape, aType);
+
+			if (aStatus != IFSelect_RetDone)
+				return nullptr;
+
+			auto bts = gcnew List<System::Byte>();
+			std::stringstream  ostr;
+			aStatus = aWriter.WriteStream(ostr);
+			unsigned char n2;
+			while (!ostr.eof()) {
+				ostr.read((char*)&n2, sizeof(n2));
+				bts->Add(n2);
+			}
+
+			if (aStatus != IFSelect_RetDone)
+				return nullptr;
+
+			return bts;
+		}
+
+
+
+		ManagedObjHandle^ Text2Brep(System::String^ str, double aFontHeight, double anExtrusion) {
+			const auto aText = toNString(str);
+			// text2brep
+			//const double aFontHeight = 20.0;
+			Font_BRepFont aFont(Font_NOF_SANS_SERIF, Font_FontAspect_Bold, aFontHeight);
+			Font_BRepTextBuilder aBuilder;
+			TopoDS_Shape aTextShape2d = aBuilder.Perform(aFont, aText);
+
+			// prism
+			//const double anExtrusion = 5.0;
+			BRepPrimAPI_MakePrism aPrismTool(aTextShape2d, gp_Vec(0, 0, 1) * anExtrusion);
+			TopoDS_Shape aTextShape3d = aPrismTool.Shape();
+			//aTextShape3d.SetLocation(); // move where needed
+
+			//BRepMesh_IncrementalMesh mesh(shape,0.00001);
+			/*bool fixShape = true;
+			if (fixShape) {
+				ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
+				unif.Build();
+				auto shape2 = unif.Shape();
+				shape = shape2;
+			}*/
+			auto ais = new AIS_Shape(aTextShape3d);
+			myAISContext()->Display(ais, true);
 
 
 			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
 
 			auto hn = GetHandle(*ais);
 			hhh->FromObjHandle(hn);
-			ret->Add(hhh);
+			return hhh;
 
-			myAISContext()->Display(ais, Standard_False);
-
-
-		}
-		/*else
-		{
-			return false;
-		}*/
-
-		myAISContext()->UpdateCurrentViewer();
-		return ret;
-	}
-
-	/// <summary>
-	///Export BRep file
-	/// </summary>
-	/// <param name="theFileName">Name of export file</param>
-	bool ExportBRep(const TCollection_AsciiString& theFileName)
-	{
-		myAISContext()->InitSelected();
-		if (!myAISContext()->MoreSelected())
-		{
-			return false;
+			// bopcut
+			//TopoDS_Shape theMainShape; // defined elsewhere
+			//BRepAlgoAPI_Cut aCutTool(theMainShape, aTextShape3d);
+			//if (!aCutTool.IsDone()) { error }
+			//TopoDS_Shape aResult = aCutTool.Shape();
 		}
 
-		Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
-		Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-		return BRepTools::Write(anIS->Shape(), theFileName.ToCString()) != Standard_False;
-	}
-
-	bool ExportStep(System::String^ str)
-	{
-		const TCollection_AsciiString aFilename = toAsciiString(str);
-		return ExportStep(aFilename);
-	}
-
-	bool ExportStep(TopObjHandle^ h, System::String^ str)
-	{
-		const TCollection_AsciiString aFilename = toAsciiString(str);
-		return ExportStep(h, aFilename);
-	}
-
-	bool ExportStep(TopObjHandle^ h, const TCollection_AsciiString& theFileName)
-	{
-		STEPControl_StepModelType aType = STEPControl_AsIs;
-		IFSelect_ReturnStatus aStatus;
-		STEPControl_Writer aWriter;
-		auto anIO = impl->findObject(h->BindId);
-
-		//auto anIO = impl->getObject(h);
-
-		Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-		TopoDS_Shape aShape = anIS->Shape();
-		
-		aShape = aShape.Located(anIS->LocalTransformation());
-		aStatus = aWriter.Transfer(aShape, aType);
-		if (aStatus != IFSelect_RetDone)
+		/// <summary>
+		///Export Step file
+		/// </summary>
+		/// <param name="theFileName">Name of export file</param>
+		bool ExportStep(const TCollection_AsciiString& theFileName)
 		{
-			return false;
-		}
+			STEPControl_StepModelType aType = STEPControl_AsIs;
+			IFSelect_ReturnStatus aStatus;
+			STEPControl_Writer aWriter;
+			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+			{
+				Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
+				Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+				TopoDS_Shape aShape = anIS->Shape();
+				aStatus = aWriter.Transfer(aShape, aType);
+				if (aStatus != IFSelect_RetDone)
+				{
+					return false;
+				}
+			}
 
-		aStatus = aWriter.Write(theFileName.ToCString());
-		if (aStatus != IFSelect_RetDone)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	/// <summary>
-	///Export Step file
-	/// </summary>
-	/// <param name="theFileName">Name of export file</param>
-	List<System::Byte>^ ExportStepStream(TopObjHandle^ h)
-	{
-		STEPControl_StepModelType aType = STEPControl_AsIs;
-		IFSelect_ReturnStatus aStatus;
-		STEPControl_Writer aWriter;
-
-		//auto anIO = impl->getObject(h);
-		auto o = impl->findObject(h->BindId);
-		auto anIO = o;
-
-		Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-		TopoDS_Shape aShape = anIS->Shape();
-		aStatus = aWriter.Transfer(aShape, aType);
-
-		if (aStatus != IFSelect_RetDone)
-			return nullptr;
-
-		auto bts = gcnew List<System::Byte>();
-		std::stringstream  ostr;
-		aStatus = aWriter.WriteStream(ostr);
-		unsigned char n2;
-		while (!ostr.eof()) {
-			ostr.read((char*)&n2, sizeof(n2));
-			bts->Add(n2);
-		}
-
-		if (aStatus != IFSelect_RetDone)
-			return nullptr;
-
-		return bts;
-	}
-
-
-
-	ManagedObjHandle^ Text2Brep(System::String^ str, double aFontHeight, double anExtrusion) {
-		const auto aText = toNString(str);
-		// text2brep
-		//const double aFontHeight = 20.0;
-		Font_BRepFont aFont(Font_NOF_SANS_SERIF, Font_FontAspect_Bold, aFontHeight);
-		Font_BRepTextBuilder aBuilder;
-		TopoDS_Shape aTextShape2d = aBuilder.Perform(aFont, aText);
-
-		// prism
-		//const double anExtrusion = 5.0;
-		BRepPrimAPI_MakePrism aPrismTool(aTextShape2d, gp_Vec(0, 0, 1) * anExtrusion);
-		TopoDS_Shape aTextShape3d = aPrismTool.Shape();
-		//aTextShape3d.SetLocation(); // move where needed
-
-		//BRepMesh_IncrementalMesh mesh(shape,0.00001);
-		/*bool fixShape = true;
-		if (fixShape) {
-			ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
-			unif.Build();
-			auto shape2 = unif.Shape();
-			shape = shape2;
-		}*/
-		auto ais = new AIS_Shape(aTextShape3d);
-		myAISContext()->Display(ais, true);
-
-
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-
-		// bopcut
-		//TopoDS_Shape theMainShape; // defined elsewhere
-		//BRepAlgoAPI_Cut aCutTool(theMainShape, aTextShape3d);
-		//if (!aCutTool.IsDone()) { error }
-		//TopoDS_Shape aResult = aCutTool.Shape();
-	}
-
-	/// <summary>
-	///Export Step file
-	/// </summary>
-	/// <param name="theFileName">Name of export file</param>
-	bool ExportStep(const TCollection_AsciiString& theFileName)
-	{
-		STEPControl_StepModelType aType = STEPControl_AsIs;
-		IFSelect_ReturnStatus aStatus;
-		STEPControl_Writer aWriter;
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
-		{
-			Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
-			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-			TopoDS_Shape aShape = anIS->Shape();
-			aStatus = aWriter.Transfer(aShape, aType);
+			aStatus = aWriter.Write(theFileName.ToCString());
 			if (aStatus != IFSelect_RetDone)
 			{
 				return false;
 			}
+
+			return true;
 		}
 
-		aStatus = aWriter.Write(theFileName.ToCString());
-		if (aStatus != IFSelect_RetDone)
+		/// <summary>
+		///Export Iges file
+		/// </summary>
+		/// <param name="theFileName">Name of export file</param>
+		bool ExportIges(const TCollection_AsciiString& theFileName)
 		{
-			return false;
-		}
+			IGESControl_Controller::Init();
+			IGESControl_Writer aWriter(Interface_Static::CVal("XSTEP.iges.unit"),
+				Interface_Static::IVal("XSTEP.iges.writebrep.mode"));
 
-		return true;
-	}
-
-	/// <summary>
-	///Export Iges file
-	/// </summary>
-	/// <param name="theFileName">Name of export file</param>
-	bool ExportIges(const TCollection_AsciiString& theFileName)
-	{
-		IGESControl_Controller::Init();
-		IGESControl_Writer aWriter(Interface_Static::CVal("XSTEP.iges.unit"),
-			Interface_Static::IVal("XSTEP.iges.writebrep.mode"));
-
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
-		{
-			Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
-			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-			TopoDS_Shape aShape = anIS->Shape();
-			aWriter.AddShape(aShape);
-		}
-
-		aWriter.ComputeModel();
-		return aWriter.Write(theFileName.ToCString()) != Standard_False;
-	}
-
-	/// <summary>
-	///Export Vrml file
-	/// </summary>
-	/// <param name="theFileName">Name of export file</param>
-	bool ExportVrml(const TCollection_AsciiString& theFileName)
-	{
-		TopoDS_Compound aRes;
-		BRep_Builder aBuilder;
-		aBuilder.MakeCompound(aRes);
-
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
-		{
-			Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
-			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-			TopoDS_Shape aShape = anIS->Shape();
-			if (aShape.IsNull())
+			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
 			{
-				return false;
+				Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
+				Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+				TopoDS_Shape aShape = anIS->Shape();
+				aWriter.AddShape(aShape);
 			}
 
-			aBuilder.Add(aRes, aShape);
+			aWriter.ComputeModel();
+			return aWriter.Write(theFileName.ToCString()) != Standard_False;
 		}
 
-		VrmlAPI_Writer aWriter;
-		aWriter.Write(aRes, theFileName.ToCString());
-
-		return true;
-	}
-
-	/// <summary>
-	///Export Stl file
-	/// </summary>
-	/// <param name="theFileName">Name of export file</param>
-	bool ExportStl(const TCollection_AsciiString& theFileName)
-	{
-		TopoDS_Compound aComp;
-		BRep_Builder aBuilder;
-		aBuilder.MakeCompound(aComp);
-
-		for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+		/// <summary>
+		///Export Vrml file
+		/// </summary>
+		/// <param name="theFileName">Name of export file</param>
+		bool ExportVrml(const TCollection_AsciiString& theFileName)
 		{
-			Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
-			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
-			TopoDS_Shape aShape = anIS->Shape();
-			if (aShape.IsNull())
+			TopoDS_Compound aRes;
+			BRep_Builder aBuilder;
+			aBuilder.MakeCompound(aRes);
+
+			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
 			{
-				return false;
+				Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
+				Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+				TopoDS_Shape aShape = anIS->Shape();
+				if (aShape.IsNull())
+				{
+					return false;
+				}
+
+				aBuilder.Add(aRes, aShape);
 			}
-			aBuilder.Add(aComp, aShape);
+
+			VrmlAPI_Writer aWriter;
+			aWriter.Write(aRes, theFileName.ToCString());
+
+			return true;
 		}
 
-		StlAPI_Writer aWriter;
-		aWriter.Write(aComp, theFileName.ToCString());
-		return true;
-	}
-	
-
-	void ResetSelectionMode() {
-		Handle(AIS_InteractiveContext) theCtx = myAISContext();
-
-		AIS_ListOfInteractive aDispList;
-		theCtx->DisplayedObjects(aDispList);
-		for (const Handle(AIS_InteractiveObject)& aPrsIter : aDispList)
+		/// <summary>
+		///Export Stl file
+		/// </summary>
+		/// <param name="theFileName">Name of export file</param>
+		bool ExportStl(const TCollection_AsciiString& theFileName)
 		{
-			Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(aPrsIter);
-			if (aShape.IsNull())
-				continue;
+			TopoDS_Compound aComp;
+			BRep_Builder aBuilder;
+			aBuilder.MakeCompound(aComp);
 
-			theCtx->Deactivate(aShape);
+			for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
+			{
+				Handle(AIS_InteractiveObject) anIO = myAISContext()->SelectedInteractive();
+				Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
+				TopoDS_Shape aShape = anIS->Shape();
+				if (aShape.IsNull())
+				{
+					return false;
+				}
+				aBuilder.Add(aComp, aShape);
+			}
 
+			StlAPI_Writer aWriter;
+			aWriter.Write(aComp, theFileName.ToCString());
+			return true;
 		}
-		//myAISContext()->Deactivate();
-	}
 
-	void SetSelectionMode(SelectionModeEnum t) {
-		if (t == SelectionModeEnum::None)
-			return;
-		Handle(AIS_InteractiveContext) theCtx = myAISContext();
-		int aSelMode = (int)t;
 
-		AIS_ListOfInteractive aDispList;
-		theCtx->DisplayedObjects(aDispList);
-		for (const Handle(AIS_InteractiveObject)& aPrsIter : aDispList)
-		{
-			Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(aPrsIter);
-			if (aShape.IsNull()) { continue; }
+		void ResetSelectionMode() {
+			Handle(AIS_InteractiveContext) theCtx = myAISContext();
 
-			theCtx->Deactivate(aShape);
-			theCtx->Activate(aShape, aSelMode, true);
+			AIS_ListOfInteractive aDispList;
+			theCtx->DisplayedObjects(aDispList);
+			for (const Handle(AIS_InteractiveObject)& aPrsIter : aDispList)
+			{
+				Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(aPrsIter);
+				if (aShape.IsNull())
+					continue;
+
+				theCtx->Deactivate(aShape);
+
+			}
+			//myAISContext()->Deactivate();
 		}
-		//myAISContext()->Activate((int)t, true);
 
-	//currentMode=t;
-	}
+		void SetSelectionMode(SelectionModeEnum t) {
+			if (t == SelectionModeEnum::None)
+				return;
+			Handle(AIS_InteractiveContext) theCtx = myAISContext();
+			int aSelMode = (int)t;
 
-	void Erase(ManagedObjHandle^ h, bool updateViewer) {
-		auto o = impl->findObject(h->BindId);
-		myAISContext()->Erase(o, updateViewer);
-	}
+			AIS_ListOfInteractive aDispList;
+			theCtx->DisplayedObjects(aDispList);
+			for (const Handle(AIS_InteractiveObject)& aPrsIter : aDispList)
+			{
+				Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(aPrsIter);
+				if (aShape.IsNull()) { continue; }
 
-	void Erase(ManagedObjHandle^ h) {
-		Erase(h, true);
-	}
+				theCtx->Deactivate(aShape);
+				theCtx->Activate(aShape, aSelMode, true);
+			}
+			//myAISContext()->Activate((int)t, true);
 
-	void Remove(ManagedObjHandle^ h) {
-		auto o = impl->findObject(h->BindId);
-		myAISContext()->Remove(o, true);
-	}
-
-	void Display(ManagedObjHandle^ h, bool wireframe) {
-		auto o = impl->findObject(h->BindId);
-		myAISContext()->Display(o, false);
-		myAISContext()->SetDisplayMode(o, wireframe ? AIS_WireFrame : AIS_Shaded, true);
-	}
-
-	gp_Trsf GetObjectMatrix(ManagedObjHandle^ h) {//AIS matrix
-		auto p = impl->findObject(h->BindId);
-		auto trans = p->Transformation();
-		return trans;
-	}
-
-	gp_Trsf GetShapeMatrix(ManagedObjHandle^ h) {
-		auto p = impl->findObject(h->BindId);
-		Handle(AIS_Shape) shapeObject = Handle(AIS_Shape)::DownCast(p);
-		if (!shapeObject.IsNull()) {
-			TopoDS_Shape aShape = shapeObject->Shape();
-
-
-			// Get the location of the shape
-			TopLoc_Location shapeLocation = aShape.Location();
-
-			// Get the transformation matrix from the location
-			gp_Trsf transformation = shapeLocation.Transformation();
-
-			return transformation;
+		//currentMode=t;
 		}
-		return {};
-	}
+
+		void Erase(IManagedObjHandle^ h, bool updateViewer) {
+			auto o = impl->findObject(h->BindId);
+			myAISContext()->Erase(o, updateViewer);
+		}
+
+		void Erase(IManagedObjHandle^ h) {
+			Erase(h, true);
+		}
+
+		void Remove(IManagedObjHandle^ h) {
+			auto o = impl->findObject(h->BindId);
+			myAISContext()->Remove(o, true);
+		}
+
+		void Display(IManagedObjHandle^ h, bool wireframe) {
+			auto o = impl->findObject(h->BindId);
+			myAISContext()->Display(o, false);
+			myAISContext()->SetDisplayMode(o, wireframe ? AIS_WireFrame : AIS_Shaded, true);
+		}
+
+		gp_Trsf GetObjectMatrix(IManagedObjHandle^ h) {//AIS matrix
+			auto p = impl->findObject(h->BindId);
+			auto trans = p->Transformation();
+			return trans;
+		}
+
+		gp_Trsf GetShapeMatrix(ManagedObjHandle^ h) {
+			auto p = impl->findObject(h->BindId);
+			Handle(AIS_Shape) shapeObject = Handle(AIS_Shape)::DownCast(p);
+			if (!shapeObject.IsNull()) {
+				TopoDS_Shape aShape = shapeObject->Shape();
+
+
+				// Get the location of the shape
+				TopLoc_Location shapeLocation = aShape.Location();
+
+				// Get the transformation matrix from the location
+				gp_Trsf transformation = shapeLocation.Transformation();
+
+				return transformation;
+			}
+			return {};
+		}
 
 
 
 
-	List<double>^ GetShapeMatrixValues(ManagedObjHandle^ h) {
-		List<double>^ ret = gcnew List<double>();
-		auto p = impl->findObject(h->BindId);
-		Handle(AIS_Shape) shapeObject = Handle(AIS_Shape)::DownCast(p);
-		if (!shapeObject.IsNull()) {
-			TopoDS_Shape aShape = shapeObject->Shape();
+		List<double>^ GetShapeMatrixValues(IManagedObjHandle^ h) {
+			List<double>^ ret = gcnew List<double>();
+			auto p = impl->findObject(h->BindId);
+			Handle(AIS_Shape) shapeObject = Handle(AIS_Shape)::DownCast(p);
+			if (!shapeObject.IsNull()) {
+				TopoDS_Shape aShape = shapeObject->Shape();
 
 
-			// Get the location of the shape
-			TopLoc_Location shapeLocation = aShape.Location();
+				// Get the location of the shape
+				TopLoc_Location shapeLocation = aShape.Location();
 
-			// Get the transformation matrix from the location
-			gp_Trsf transformation = shapeLocation.Transformation();
+				// Get the transformation matrix from the location
+				gp_Trsf transformation = shapeLocation.Transformation();
 
+				for (size_t i = 1; i <= 3; i++)
+				{
+					for (size_t j = 1; j <= 4; j++)
+					{
+						ret->Add(transformation.Value(i, j));
+					}
+				}
+			}
+
+
+
+			return ret;
+		}
+
+
+
+		List<double>^ GetObjectMatrixValues(IManagedObjHandle^ h) {
+			List<double>^ ret = gcnew List<double>();
+			auto p = impl->findObject(h->BindId);
+			auto trans = p->Transformation();
 			for (size_t i = 1; i <= 3; i++)
 			{
 				for (size_t j = 1; j <= 4; j++)
 				{
-					ret->Add(transformation.Value(i, j));
+					ret->Add(trans.Value(i, j));
 				}
 			}
+			return ret;
+		}
+
+		void MoveObject(IManagedObjHandle^ h, double x, double y, double z, bool rel)
+		{
+			MoveObject(h->AisShapeBindId, x, y, z, rel);
+		}
+
+		void MoveObject(ITopObjHandle^ h, double x, double y, double z, bool rel)
+		{
+			MoveObject(h->BindId, x, y, z, rel);
+		}
+
+		void MoveObject(int id, double x, double y, double z, bool rel)
+		{
+			auto o = impl->findObject(id);
+			gp_Trsf tr;
+			tr.SetValues(1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z);
+			if (rel) {
+				auto mtr = o->Transformation();
+				tr.Multiply(mtr);
+			}
+
+			TopLoc_Location p(tr);
+			myAISContext()->SetLocation(o, p);
 		}
 
 
 
-		return ret;
-	}
-
-
-
-	List<double>^ GetObjectMatrixValues(ManagedObjHandle^ h) {
-		List<double>^ ret = gcnew List<double>();
-		auto p = impl->findObject(h->BindId);
-		auto trans = p->Transformation();
-		for (size_t i = 1; i <= 3; i++)
+		void SetMatrixValues(IManagedObjHandle^ h, List<double>^ m)
 		{
-			for (size_t j = 1; j <= 4; j++)
+			auto o = impl->findObject(h->BindId);
+			gp_Trsf tr;
+			double a11 = m[0];
+			double a12 = m[1];
+			double a13 = m[2];
+			double a14 = m[3];
+
+			double a21 = m[0 + 4];
+			double a22 = m[1 + 4];
+			double a23 = m[2 + 4];
+			double a24 = m[3 + 4];
+
+			double a31 = m[0 + 8];
+			double a32 = m[1 + 8];
+			double a33 = m[2 + 8];
+			double a34 = m[3 + 8];
+			tr.SetValues(a11, a12, a13, a14,
+				a21, a22, a23, a24,
+				a31, a32, a33, a34
+			);
+
+			TopLoc_Location p(tr);
+			myAISContext()->SetLocation(o, p);
+
+		}
+
+		void RotateObject(IManagedObjHandle^ h, double x, double y, double z, double ang, bool rel)
+		{
+			auto o = impl->findObject(h->BindId);
+			gp_Trsf tr;
+			gp_Ax1 ax(gp_Pnt(0, 0, 0), gp_Dir(x, y, z));
+			tr.SetRotation(ax, ang);
+
+			if (rel) {
+				auto mtr = GetObjectMatrix(h);
+				tr.Multiply(mtr);
+			}
+
+
+			TopLoc_Location p(tr);
+			myAISContext()->SetLocation(o, p);
+		}
+
+		IManagedObjHandle^ MirrorObject(IManagedObjHandle^ h, Vector3d dir, Vector3d pnt, bool axis2, bool rel)
+		{
+			ObjHandle oh = ObjHandle(h);
+			const auto object1 = impl->findObject(oh);
+
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+
+
+			gp_Trsf tr;
+			if (axis2) {
+				gp_Ax2 ax2(gp_Pnt(pnt.X, pnt.Y, pnt.Z), gp_Dir(dir.X, dir.Y, dir.Z));
+				tr.SetMirror(ax2);
+			}
+			else {
+				gp_Ax1 ax(gp_Pnt(pnt.X, pnt.Y, pnt.Z), gp_Dir(dir.X, dir.Y, dir.Z));
+				tr.SetMirror(ax);
+			}
+
+
+			if (rel) {
+				auto mtr = GetObjectMatrix(h);
+				tr.Multiply(mtr);
+			}
+
+			auto shape = BRepBuilderAPI_Transform(shape0, tr, Standard_True);
+			//TopLoc_Location p(tr);		
+			//myAISContext()->SetLocation(o, p);	
+			auto ais = new AIS_Shape(shape.Shape());
+			//myAISContext()->Display(new AIS_Shape(shape.Shape()), true);
+			myAISContext()->Display(ais, true);
+
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		List<List<Vector3d>^>^ IteratePoly(ITopObjHandle^ h, bool useLocalTransform, bool useWholeShapeTransform) {
+
+			List<List<Vector3d>^>^ ret = gcnew List<List<Vector3d>^>();
+
+			List<Vector3d>^ verts = gcnew List<Vector3d>();
+			List<Vector3d>^ norms = gcnew List<Vector3d>();
+
+			auto pp = impl->IteratePoly(h->BindId, useLocalTransform, useWholeShapeTransform);
+			for (size_t i = 0; i < pp.size(); i += 6)
 			{
-				ret->Add(trans.Value(i, j));
+				Vector3d v;
+				v.X = pp[i];
+				v.Y = pp[i + 1];
+				v.Z = pp[i + 2];
+				verts->Add(v);
+
+				Vector3d v2;
+				v2.X = pp[i + 3];
+				v2.Y = pp[i + 4];
+				v2.Z = pp[i + 5];
+				norms->Add(v2);
 			}
-		}
-		return ret;
-	}
 
-	void MoveObject(ManagedObjHandle^ h, double x, double y, double z, bool rel)
-	{
-		MoveObject(h->AisShapeBindId, x, y, z, rel);
-	}
+			ret->Add(verts);
+			ret->Add(norms);
 
-	void MoveObject(TopObjHandle^ h, double x, double y, double z, bool rel)
-	{
-		MoveObject(h->BindId, x, y, z, rel);
-	}
-
-	void MoveObject(int id, double x, double y, double z, bool rel)
-	{
-		auto o = impl->findObject(id);
-		gp_Trsf tr;
-		tr.SetValues(1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z);
-		if (rel) {
-			auto mtr = o->Transformation();
-			tr.Multiply(mtr);
+			return ret;
 		}
 
-		TopLoc_Location p(tr);
-		myAISContext()->SetLocation(o, p);
-	}
+		IManagedObjHandle^ MakeDiff(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
+			ObjHandle h1 = ObjHandle(mh1);
+			ObjHandle h2(mh2);
+			const auto ret = impl->MakeBoolDiff(h1, h2);
+			auto ais = new AIS_Shape(ret);
+			myAISContext()->Display(ais, true);
 
 
 
-	void SetMatrixValues(ManagedObjHandle^ h, List<double>^ m)
-	{
-		auto o = impl->findObject(h->BindId);
-		gp_Trsf tr;
-		double a11 = m[0];
-		double a12 = m[1];
-		double a13 = m[2];
-		double a14 = m[3];
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
 
-		double a21 = m[0 + 4];
-		double a22 = m[1 + 4];
-		double a23 = m[2 + 4];
-		double a24 = m[3 + 4];
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
 
-		double a31 = m[0 + 8];
-		double a32 = m[1 + 8];
-		double a33 = m[2 + 8];
-		double a34 = m[3 + 8];
-		tr.SetValues(a11, a12, a13, a14,
-			a21, a22, a23, a24,
-			a31, a32, a33, a34
-		);
+		IManagedObjHandle^ MakeFuse(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
+			ObjHandle h1 = ObjHandle(mh1);
+			ObjHandle h2 = ObjHandle(mh2);
+			const auto ret = impl->MakeBoolFuse(h1, h2);
 
-		TopLoc_Location p(tr);
-		myAISContext()->SetLocation(o, p);
+			auto ais = new AIS_Shape(ret);
+			myAISContext()->Display(ais, false);
 
-	}
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
 
-	void RotateObject(ManagedObjHandle^ h, double x, double y, double z, double ang, bool rel)
-	{
-		auto o = impl->findObject(h->BindId);
-		gp_Trsf tr;
-		gp_Ax1 ax(gp_Pnt(0, 0, 0), gp_Dir(x, y, z));
-		tr.SetRotation(ax, ang);
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
 
-		if (rel) {
-			auto mtr = GetObjectMatrix(h);
-			tr.Multiply(mtr);
 		}
 
 
-		TopLoc_Location p(tr);
-		myAISContext()->SetLocation(o, p);
-	}
 
-	ManagedObjHandle^ MirrorObject(ManagedObjHandle^ h, Vector3d dir, Vector3d pnt, bool axis2, bool rel)
-	{
-		ObjHandle oh = h->ToObjHandle();
-		const auto object1 = impl->findObject(oh);
+		IManagedObjHandle^ Clone(IManagedObjHandle^ m) {
+			BRepBuilderAPI_Copy copy;
+			ObjHandle h = ObjHandle(m);
 
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			const auto object1 = impl->findObject(h);
 
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			shape0 = shape0.Located(object1->LocalTransformation());
+			copy.Perform(shape0);
 
-		gp_Trsf tr;
-		if (axis2) {
-			gp_Ax2 ax2(gp_Pnt(pnt.X, pnt.Y, pnt.Z), gp_Dir(dir.X, dir.Y, dir.Z));
-			tr.SetMirror(ax2);
-		}
-		else {
-			gp_Ax1 ax(gp_Pnt(pnt.X, pnt.Y, pnt.Z), gp_Dir(dir.X, dir.Y, dir.Z));
-			tr.SetMirror(ax);
-		}
+			auto shapeCopy = copy.Shape();
 
+			auto ais = new AIS_Shape(shapeCopy);
+			myAISContext()->Display(ais, true);
 
-		if (rel) {
-			auto mtr = GetObjectMatrix(h);
-			tr.Multiply(mtr);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+
 		}
 
-		auto shape = BRepBuilderAPI_Transform(shape0, tr, Standard_True);
-		//TopLoc_Location p(tr);		
-		//myAISContext()->SetLocation(o, p);	
-		auto ais = new AIS_Shape(shape.Shape());
-		//myAISContext()->Display(new AIS_Shape(shape.Shape()), true);
-		myAISContext()->Display(ais, true);
+		IManagedObjHandle^ MakePrism(IManagedObjHandle^ m, double height) {
+			ObjHandle h = ObjHandle(m);
+			BRepBuilderAPI_MakeFace bface;
+			auto			 object1 = impl->findObject(h);
 
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			auto compound = TopoDS::Compound(shape0);
 
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
+			int counter = 0;
+			for (TopExp_Explorer aExpFace(shape0, TopAbs_WIRE); aExpFace.More(); aExpFace.Next())
+			{
+				const auto ttt = aExpFace.Current();
+				const auto& edgee = TopoDS::Wire(ttt);
+				auto tt = ttt.TShape();
 
-	List<List<Vector3d>^>^ IteratePoly(TopObjHandle^ h, bool useLocalTransform, bool useWholeShapeTransform) {
-
-		List<List<Vector3d>^>^ ret = gcnew List<List<Vector3d>^>();
-
-		List<Vector3d>^ verts = gcnew List<Vector3d>();
-		List<Vector3d>^ norms = gcnew List<Vector3d>();
-		
-		auto pp = impl->IteratePoly(h->BindId, useLocalTransform, useWholeShapeTransform);
-		for (size_t i = 0; i < pp.size(); i += 6)
-		{
-			Vector3d v;
-			v.X = pp[i];
-			v.Y = pp[i + 1];
-			v.Z = pp[i + 2];
-			verts->Add(v);
-
-			Vector3d v2;
-			v2.X = pp[i + 3];
-			v2.Y = pp[i + 4];
-			v2.Z = pp[i + 5];
-			norms->Add(v2);
-		}
-
-		ret->Add(verts);
-		ret->Add(norms);
-
-		return ret;
-	}
-
-	ManagedObjHandle^ MakeDiff(ManagedObjHandle^ mh1, ManagedObjHandle^ mh2) {
-		ObjHandle h1 = mh1->ToObjHandle();
-		ObjHandle h2 = mh2->ToObjHandle();
-		const auto ret = impl->MakeBoolDiff(h1, h2);
-		auto ais = new AIS_Shape(ret);
-		myAISContext()->Display(ais, true);
-
-
-
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ MakeFuse(ManagedObjHandle^ mh1, ManagedObjHandle^ mh2) {
-		ObjHandle h1 = mh1->ToObjHandle();
-		ObjHandle h2 = mh2->ToObjHandle();
-		const auto ret = impl->MakeBoolFuse(h1, h2);
-
-		auto ais = new AIS_Shape(ret);
-		myAISContext()->Display(ais, false);
-
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-
-	}
-
-	ManagedObjHandle^ Clone(ManagedObjHandle^ m) {
-		BRepBuilderAPI_Copy copy;
-		ObjHandle h = m->ToObjHandle();
-
-		const auto object1 = impl->findObject(h);
-
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		shape0 = shape0.Located(object1->LocalTransformation());
-		copy.Perform(shape0);
-
-		auto shapeCopy = copy.Shape();
-
-		auto ais = new AIS_Shape(shapeCopy);
-		myAISContext()->Display(ais, true);
-
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-
-	}
-
-	ManagedObjHandle^ MakePrism(ManagedObjHandle^ m, double height) {
-		ObjHandle h = m->ToObjHandle();
-		BRepBuilderAPI_MakeFace bface;
-		auto			 object1 = impl->findObject(h);
-
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		auto compound = TopoDS::Compound(shape0);
-
-		int counter = 0;
-		for (TopExp_Explorer aExpFace(shape0, TopAbs_WIRE); aExpFace.More(); aExpFace.Next())
-		{
-			const auto ttt = aExpFace.Current();
-			const auto& edgee = TopoDS::Wire(ttt);
-			auto tt = ttt.TShape();
-
-			if (edgee.IsNull()) {
-				continue;
-			}
-			//if (ttt3 == h.handleT) 
-			//{
-			TopoDS_Wire wire = TopoDS::Wire(aExpFace.Current());
-			BRepBuilderAPI_MakeFace face1(wire);
-			if (counter > 0) {
-
-				//wire.Reverse();
-				bface.Add(wire);
-			}
-			else
-				bface.Init(face1);
-
-			counter++;
-			//}					
-		}
-
-		auto profile = bface.Face();
-		//myAISContext()->Display(new AIS_Shape(profile), true);
-
-		gp_Vec vec(0, 0, height);
-		auto body = BRepPrimAPI_MakePrism(profile, vec);
-
-		auto shape = body.Shape();
-		//BRepMesh_IncrementalMesh mesh(shape,0.00001);
-		/*bool fixShape = true;
-		if (fixShape) {
-			ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
-			unif.Build();
-			auto shape2 = unif.Shape();
-			shape = shape2;
-		}*/
-		auto ais = new AIS_Shape(shape);
-		myAISContext()->Display(ais, true);
-
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-
-
-		//const auto ret = impl->MakeBoolFuse(h1, h2, fixShape);
-		//myAISContext()->Display(new AIS_Shape(ret), true);
-	}
-
-	ManagedObjHandle^ MakePrismFromFace(ManagedObjHandle^ m, double height)
-	{
-		return MakePrismFromFace(m->AisShapeBindId, m, height);
-	}
-
-	ManagedObjHandle^ MakePrismFromFace(int parentId, ManagedObjHandle^ m, double height) {
-		ObjHandle h = m->ToObjHandle();
-		BRepBuilderAPI_MakeFace bface;
-		const auto object1 = impl->findObject(parentId);
-
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-
-		int counter = 0;
-		for (TopExp_Explorer aExpFace(shape0, TopAbs_FACE); aExpFace.More(); aExpFace.Next())
-		{
-			auto ttt = aExpFace.Current();
-			auto ind = AddOrGetShapeIndex(ttt);
-
-			ttt = ttt.Located(object1->LocalTransformation());
-
-			const auto& edgee = TopoDS::Face(ttt);
-
-
-			if (edgee.IsNull()) {
-				continue;
-			}
-			if (ind == h.bindId) {
-
-
-				TopLoc_Location aLocation;
-				Handle(Geom_Surface) aSurf = BRep_Tool::Surface(edgee, aLocation);
-
-				auto plane = Handle(Geom_Plane)::DownCast(aSurf);
-
-				auto pln = (*plane).Pln();
-
-				float aU = 0;
-				float aV = 0;
-				gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
-				Vector3d pos;
-				Vector3d nrm;
-
-				PlaneSurfInfo^ ret = gcnew PlaneSurfInfo();
-				GProp_GProps massProps;
-				BRepGProp::SurfaceProperties(ttt, massProps);
-				gp_Pnt gPt = massProps.CentreOfMass();
-
-				pos.X = aPnt.X();
-				pos.Y = aPnt.Y();
-				pos.Z = aPnt.Z();
-
-				auto orient = edgee.Orientation();
-
-				auto dir = pln.Axis().Direction().Transformed(aLocation.Transformation());
-				if (orient == TopAbs_REVERSED) {
-					dir.Reverse();
+				if (edgee.IsNull()) {
+					continue;
 				}
-				gp_Vec vec(dir.X(), dir.Y(), dir.Z());
-				vec *= height;
+				//if (ttt3 == h.handleT) 
+				//{
+				TopoDS_Wire wire = TopoDS::Wire(aExpFace.Current());
+				BRepBuilderAPI_MakeFace face1(wire);
+				if (counter > 0) {
 
-				auto body = BRepPrimAPI_MakePrism(edgee, vec);
+					//wire.Reverse();
+					bface.Add(wire);
+				}
+				else
+					bface.Init(face1);
 
-				auto shape = body.Shape();
-				//BRepMesh_IncrementalMesh mesh(shape,0.00001);
-				/*bool fixShape = true;
-				if (fixShape) {
-					ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
-					unif.Build();
-					auto shape2 = unif.Shape();
-					shape = shape2;
-				}*/
-				auto ais = new AIS_Shape(shape);
-				myAISContext()->Display(ais, true);
-
-				ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-				auto hn = GetHandle(*ais);
-				hhh->FromObjHandle(hn);
-				return hhh;
+				counter++;
+				//}					
 			}
 
+			auto profile = bface.Face();
+			//myAISContext()->Display(new AIS_Shape(profile), true);
+
+			gp_Vec vec(0, 0, height);
+			auto body = BRepPrimAPI_MakePrism(profile, vec);
+
+			auto shape = body.Shape();
+			//BRepMesh_IncrementalMesh mesh(shape,0.00001);
+			/*bool fixShape = true;
+			if (fixShape) {
+				ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
+				unif.Build();
+				auto shape2 = unif.Shape();
+				shape = shape2;
+			}*/
+			auto ais = new AIS_Shape(shape);
+			myAISContext()->Display(ais, true);
+
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+
+
+			//const auto ret = impl->MakeBoolFuse(h1, h2, fixShape);
+			//myAISContext()->Display(new AIS_Shape(ret), true);
 		}
 
-
-		return nullptr;
-
-
-		//const auto ret = impl->MakeBoolFuse(h1, h2, fixShape);
-		//myAISContext()->Display(new AIS_Shape(ret), true);
-	}
-	ManagedObjHandle^ MakeCommon(ManagedObjHandle^ mh1, ManagedObjHandle^ mh2) {
-		ObjHandle h1 = mh1->ToObjHandle();
-		ObjHandle h2 = mh2->ToObjHandle();
-		const auto ret = impl->MakeBoolCommon(h1, h2);
-
-
-		auto ais = new AIS_Shape(ret);
-		myAISContext()->Display(ais, true);
-
-
-
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	void MakeBool() {
-		gp_Ax2 anAxis;
-		anAxis.SetLocation(gp_Pnt(0.0, 100.0, 0.0));
-
-		TopoDS_Shape aTopoBox = BRepPrimAPI_MakeBox(anAxis, 3.0, 4.0, 5.0);
-		TopoDS_Shape aTopoSphere = BRepPrimAPI_MakeSphere(anAxis, 2.5);
-		TopoDS_Shape aFusedShape = BRepAlgoAPI_Fuse(aTopoBox, aTopoSphere);
-
-		gp_Trsf aTrsf;
-		aTrsf.SetTranslation(gp_Vec(8.0, 0.0, 0.0));
-		BRepBuilderAPI_Transform aTransform(aFusedShape, aTrsf);
-
-		Handle_AIS_Shape anAisBox = new AIS_Shape(aTopoBox);
-		Handle_AIS_Shape anAisSphere = new AIS_Shape(aTopoSphere);
-		Handle_AIS_Shape anAisFusedShape = new AIS_Shape(aTransform.Shape());
-
-		anAisBox->SetColor(Quantity_NOC_SPRINGGREEN);
-		anAisSphere->SetColor(Quantity_NOC_STEELBLUE);
-		anAisFusedShape->SetColor(Quantity_NOC_ROSYBROWN);
-
-		myAISContext()->Display(anAisBox, true);
-		myAISContext()->Display(anAisSphere, true);
-		myAISContext()->Display(anAisFusedShape, true);
-	}
-
-	ManagedObjHandle^ AddWireDraft(double height) {
-		BRepBuilderAPI_MakeFace bface;
-
-		BRepBuilderAPI_MakeWire wire;
-		std::vector<gp_Pnt> pnts;
-		pnts.push_back(gp_Pnt(0, 0, 0));
-		pnts.push_back(gp_Pnt(100, 0, 0));
-		pnts.push_back(gp_Pnt(100, 100, 0));
-		pnts.push_back(gp_Pnt(0, 100, 0));
-		for (size_t i = 1; i <= pnts.size(); i++)
+		IManagedObjHandle^ MakePrismFromFace(IManagedObjHandle^ m, double height)
 		{
-			Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnts[i - 1], pnts[i % pnts.size()]);
-			auto edge = BRepBuilderAPI_MakeEdge(seg1);
-			wire.Add(edge);
+			return MakePrismFromFace(m->AisShapeBindId, m, height);
 		}
 
-		auto seg2 = GC_MakeCircle(gp_Ax1(gp_Pnt(50, 50, 0), gp_Dir(0, 0, 1)), 10).Value();
-		auto edge1 = BRepBuilderAPI_MakeEdge(seg2);
-		auto wb = BRepBuilderAPI_MakeWire(edge1).Wire();
-		wb.Reverse();
+		IManagedObjHandle^ MakePrismFromFace(int parentId, IManagedObjHandle^ m, double height) {
+			ObjHandle h = ObjHandle(m);
+			BRepBuilderAPI_MakeFace bface;
+			const auto object1 = impl->findObject(parentId);
 
-		//myAISContext()->Display(new AIS_Shape(wire.Wire()), true);
-		//return;
-		BRepBuilderAPI_MakeFace face1(wire.Wire());
-		bface.Init(face1);
-		bface.Add(wb);
-		auto profile = bface.Face();
-		//myAISContext()->Display(new AIS_Shape(profile), true);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
 
-		gp_Vec vec(0, 0, height);
-		auto body = BRepPrimAPI_MakePrism(profile, vec);
+			int counter = 0;
+			for (TopExp_Explorer aExpFace(shape0, TopAbs_FACE); aExpFace.More(); aExpFace.Next())
+			{
+				auto ttt = aExpFace.Current();
+				auto ind = AddOrGetShapeIndex(ttt);
 
-		auto shape = body.Shape();
-		auto ais = new AIS_Shape(shape);
-		myAISContext()->Display(ais, true);
+				ttt = ttt.Located(object1->LocalTransformation());
 
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+				const auto& edgee = TopoDS::Face(ttt);
 
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
 
-	Nullable<Vector3d> GetVertexPosition(ManagedObjHandle^ h1)
-	{
-		return GetVertexPosition(h1->AisShapeBindId, h1);
-	}
+				if (edgee.IsNull()) {
+					continue;
+				}
+				if (ind == h.bindId) {
 
-	Nullable<Vector3d> GetVertexPosition(int parentId, ManagedObjHandle^ h1)
-	{
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(parentId);
 
-		auto temp1 = Handle(AIS_Shape)::DownCast(object1);
-		if (temp1.IsNull()) {
+					TopLoc_Location aLocation;
+					Handle(Geom_Surface) aSurf = BRep_Tool::Surface(edgee, aLocation);
+
+					auto plane = Handle(Geom_Plane)::DownCast(aSurf);
+
+					auto pln = (*plane).Pln();
+
+					float aU = 0;
+					float aV = 0;
+					gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
+					Vector3d pos;
+					Vector3d nrm;
+
+					PlaneSurfInfo^ ret = gcnew PlaneSurfInfo();
+					GProp_GProps massProps;
+					BRepGProp::SurfaceProperties(ttt, massProps);
+					gp_Pnt gPt = massProps.CentreOfMass();
+
+					pos.X = aPnt.X();
+					pos.Y = aPnt.Y();
+					pos.Z = aPnt.Z();
+
+					auto orient = edgee.Orientation();
+
+					auto dir = pln.Axis().Direction().Transformed(aLocation.Transformation());
+					if (orient == TopAbs_REVERSED) {
+						dir.Reverse();
+					}
+					gp_Vec vec(dir.X(), dir.Y(), dir.Z());
+					vec *= height;
+
+					auto body = BRepPrimAPI_MakePrism(edgee, vec);
+
+					auto shape = body.Shape();
+					//BRepMesh_IncrementalMesh mesh(shape,0.00001);
+					/*bool fixShape = true;
+					if (fixShape) {
+						ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
+						unif.Build();
+						auto shape2 = unif.Shape();
+						shape = shape2;
+					}*/
+					auto ais = new AIS_Shape(shape);
+					myAISContext()->Display(ais, true);
+
+					ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+					auto hn = GetHandle(*ais);
+					hhh->FromObjHandle(hn);
+					return hhh;
+				}
+
+			}
+
+
+			return nullptr;
+
+
+			//const auto ret = impl->MakeBoolFuse(h1, h2, fixShape);
+			//myAISContext()->Display(new AIS_Shape(ret), true);
+		}
+
+		IManagedObjHandle^ MakeCommon(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
+			ObjHandle h1 = ObjHandle(mh1);
+			ObjHandle h2 = ObjHandle(mh2);
+			const auto ret = impl->MakeBoolCommon(h1, h2);
+
+
+			auto ais = new AIS_Shape(ret);
+			myAISContext()->Display(ais, true);
+
+
+
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		void MakeBool() {
+			gp_Ax2 anAxis;
+			anAxis.SetLocation(gp_Pnt(0.0, 100.0, 0.0));
+
+			TopoDS_Shape aTopoBox = BRepPrimAPI_MakeBox(anAxis, 3.0, 4.0, 5.0);
+			TopoDS_Shape aTopoSphere = BRepPrimAPI_MakeSphere(anAxis, 2.5);
+			TopoDS_Shape aFusedShape = BRepAlgoAPI_Fuse(aTopoBox, aTopoSphere);
+
+			gp_Trsf aTrsf;
+			aTrsf.SetTranslation(gp_Vec(8.0, 0.0, 0.0));
+			BRepBuilderAPI_Transform aTransform(aFusedShape, aTrsf);
+
+			Handle_AIS_Shape anAisBox = new AIS_Shape(aTopoBox);
+			Handle_AIS_Shape anAisSphere = new AIS_Shape(aTopoSphere);
+			Handle_AIS_Shape anAisFusedShape = new AIS_Shape(aTransform.Shape());
+
+			anAisBox->SetColor(Quantity_NOC_SPRINGGREEN);
+			anAisSphere->SetColor(Quantity_NOC_STEELBLUE);
+			anAisFusedShape->SetColor(Quantity_NOC_ROSYBROWN);
+
+			myAISContext()->Display(anAisBox, true);
+			myAISContext()->Display(anAisSphere, true);
+			myAISContext()->Display(anAisFusedShape, true);
+		}
+
+		IManagedObjHandle^ AddWireDraft(double height) {
+			BRepBuilderAPI_MakeFace bface;
+
+			BRepBuilderAPI_MakeWire wire;
+			std::vector<gp_Pnt> pnts;
+			pnts.push_back(gp_Pnt(0, 0, 0));
+			pnts.push_back(gp_Pnt(100, 0, 0));
+			pnts.push_back(gp_Pnt(100, 100, 0));
+			pnts.push_back(gp_Pnt(0, 100, 0));
+			for (size_t i = 1; i <= pnts.size(); i++)
+			{
+				Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnts[i - 1], pnts[i % pnts.size()]);
+				auto edge = BRepBuilderAPI_MakeEdge(seg1);
+				wire.Add(edge);
+			}
+
+			auto seg2 = GC_MakeCircle(gp_Ax1(gp_Pnt(50, 50, 0), gp_Dir(0, 0, 1)), 10).Value();
+			auto edge1 = BRepBuilderAPI_MakeEdge(seg2);
+			auto wb = BRepBuilderAPI_MakeWire(edge1).Wire();
+			wb.Reverse();
+
+			//myAISContext()->Display(new AIS_Shape(wire.Wire()), true);
+			//return;
+			BRepBuilderAPI_MakeFace face1(wire.Wire());
+			bface.Init(face1);
+			bface.Add(wb);
+			auto profile = bface.Face();
+			//myAISContext()->Display(new AIS_Shape(profile), true);
+
+			gp_Vec vec(0, 0, height);
+			auto body = BRepPrimAPI_MakePrism(profile, vec);
+
+			auto shape = body.Shape();
+			auto ais = new AIS_Shape(shape);
+			myAISContext()->Display(ais, true);
+
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		Nullable<Vector3d> GetVertexPosition(IManagedObjHandle^ h1)
+		{
+			return GetVertexPosition(h1->AisShapeBindId, h1);
+		}
+
+		Nullable<Vector3d> GetVertexPosition(int parentId, IManagedObjHandle^ h1)
+		{
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(parentId);
+
+			auto temp1 = Handle(AIS_Shape)::DownCast(object1);
+			if (temp1.IsNull()) {
+				return {};
+			}
+			TopoDS_Shape shape0 = temp1->Shape();
+
+
+
+			for (TopExp_Explorer exp(shape0, TopAbs_VERTEX); exp.More(); exp.Next()) {
+				auto ttt = exp.Current();
+				auto ind = GetShapeIndex(ttt);
+				ttt = ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Vertex(ttt);
+
+
+				if (edgee.IsNull()) {
+					continue;
+				}
+				if (ind == hh.bindId) {
+					Vector3d ret;
+
+					gp_Pnt p = BRep_Tool::Pnt(edgee);
+					ret.X = p.X();
+					ret.Y = p.Y();
+					ret.Z = p.Z();
+					return ret;
+				}
+			}
 			return {};
 		}
-		TopoDS_Shape shape0 = temp1->Shape();
 
-
-
-		for (TopExp_Explorer exp(shape0, TopAbs_VERTEX); exp.More(); exp.Next()) {
-			auto ttt = exp.Current();
-			auto ind = GetShapeIndex(ttt);
-			ttt = ttt.Located(object1->LocalTransformation());
-
-			const auto& edgee = TopoDS::Vertex(ttt);
-
-
-			if (edgee.IsNull()) {
-				continue;
-			}
-			if (ind == hh.bindId) {
-				Vector3d ret;
-
-				gp_Pnt p = BRep_Tool::Pnt(edgee);
-				ret.X = p.X();
-				ret.Y = p.Y();
-				ret.Z = p.Z();
-				return ret;
-			}
+		IEdgeInfo^ GetEdgeInfoPosition(IManagedObjHandle^ h1)
+		{
+			ManagedObjHandle^ hh = safe_cast<ManagedObjHandle^>(h1);
+			return GetEdgeInfoPosition(h1->AisShapeBindId, hh);
 		}
-		return {};
-	}
 
-	EdgeInfo^ GetEdgeInfoPosition(ManagedObjHandle^ h1)
-	{
-		return GetEdgeInfoPosition(h1->AisShapeBindId, h1);
-	}
+		IEdgeInfo^ GetEdgeInfoPosition(int parentId, IManagedObjHandle^ h1)
+		{
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(parentId);
+			if (!object1)
+				return {};
 
-	EdgeInfo^ GetEdgeInfoPosition(int parentId, ManagedObjHandle^ h1)
-	{
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(parentId);
-		if (!object1)
-			return {};
+			auto temp1 = Handle(AIS_Shape)::DownCast(object1);
+			if (temp1.IsNull()) {
+				return nullptr;
+			}
+			TopoDS_Shape shape0 = temp1->Shape();
 
-		auto temp1 = Handle(AIS_Shape)::DownCast(object1);
-		if (temp1.IsNull()) {
+
+
+
+			for (TopExp_Explorer exp(shape0, TopAbs_EDGE); exp.More(); exp.Next()) {
+				auto ttt = exp.Current();
+				auto ind = AddOrGetShapeIndex(ttt);
+				ttt = ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Edge(ttt);
+
+				if (edgee.IsNull())
+					continue;
+
+				if (ind == hh.bindId) {
+
+					GProp_GProps massProps;
+					BRepGProp::LinearProperties(ttt, massProps);
+					auto len = massProps.Mass();
+
+					gp_Pnt gPt = massProps.CentreOfMass();
+
+					//Analysis of Edge
+					Standard_Real First, Last;
+					Handle(Geom_Curve) curve = BRep_Tool::Curve(edgee, First, Last); //Extract the curve from the edge
+					GeomAdaptor_Curve aAdaptedCurve(curve);
+					GeomAbs_CurveType curveType = aAdaptedCurve.GetType();
+
+					gp_Pnt pnt1, pnt2;
+					aAdaptedCurve.D0(First, pnt1);
+					aAdaptedCurve.D0(Last, pnt2);
+					int nPoles = 2;
+					if (curveType == GeomAbs_BezierCurve || curveType == GeomAbs_BSplineCurve)
+						nPoles = aAdaptedCurve.NbPoles();
+
+
+					EdgeInfo^ ret = nullptr;
+					if (curveType == GeomAbs_Circle) {
+						auto ret2 = gcnew CircleEdgeInfo();
+						Handle(Geom_Circle) C2 = Handle(Geom_Circle)::DownCast(curve);
+						if (!C2.IsNull())
+						{
+							ret2->Radius = C2->Circ().Radius();
+						}
+						ret = ret2;
+					}
+					else
+						ret = gcnew EdgeInfo();
+					ret->BindId = ind;
+					ret->AisShapeBindId = parentId;
+					ret->Length = len;
+					ret->CurveType = (CurveType)curveType;
+
+					ret->COM.X = gPt.X();
+					ret->COM.Y = gPt.Y();
+					ret->COM.Z = gPt.Z();
+
+					ret->Start.X = pnt1.X();
+					ret->Start.Y = pnt1.Y();
+					ret->Start.Z = pnt1.Z();
+
+					ret->End.X = pnt2.X();
+					ret->End.Y = pnt2.Y();
+					ret->End.Z = pnt2.Z();
+					return ret;
+				}
+			}
 			return nullptr;
 		}
-		TopoDS_Shape shape0 = temp1->Shape();
+
+		CylinderSurfInfo^ ExtractCylinderSurface(TopoDS_Shape ttt) {
+			auto loc = ttt.Location();
+
+			const auto& aFace = TopoDS::Face(ttt);
+			auto orient = aFace.Orientation();
+
+			TopLoc_Location aLocation;
+			Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
+
+			auto bsurf = Handle(Geom_BoundedSurface)::DownCast(aSurf);
+			auto swept = Handle(Geom_SweptSurface)::DownCast(aSurf);
+			auto cyl = Handle(Geom_CylindricalSurface)::DownCast(aSurf);
+			auto rev = Handle(Geom_SurfaceOfRevolution)::DownCast(aSurf);
+			auto rtrimmed = Handle(Geom_RectangularTrimmedSurface)::DownCast(aSurf);
+			if (rtrimmed) {
+				auto basis = (*rtrimmed).BasisSurface();
+				auto cyl1 = Handle(Geom_CylindricalSurface)::DownCast(basis);
+				if (cyl1) {
+					cyl = cyl1;
+				}
+			}
+
+			double rad = 0;
+			if (cyl) {
+				rad = (*cyl).Radius();
+			}
+			else if (rev) {
+				rad = (*cyl).Radius();
+			}
+			else if (swept) {
+				rad = (*cyl).Radius();
+			}
+			else if (bsurf) {
+				rad = (*cyl).Radius();
+			}
+
+
+			auto dir = cyl->Axis().Direction().Transformed(aLocation.Transformation());
+			if (orient == TopAbs_REVERSED) {
+				dir.Reverse();
+			}
+			float aU = 0;
+			float aV = 0;
+
+			gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
+			Vector3d pos;
+			Vector3d nrm;
+
+			CylinderSurfInfo^ ret = gcnew CylinderSurfInfo();
+
+			GProp_GProps massProps;
+			BRepGProp::SurfaceProperties(ttt, massProps);
+			gp_Pnt gPt = massProps.CentreOfMass();
+
+			nrm.X = dir.X();
+			nrm.Y = dir.Y();
+			nrm.Z = dir.Z();
+
+			pos.X = aPnt.X();
+			pos.Y = aPnt.Y();
+			pos.Z = aPnt.Z();
+
+			ret->COM.X = gPt.X();
+			ret->COM.Y = gPt.Y();
+			ret->COM.Z = gPt.Z();
+			ret->Position = pos;
+			ret->Radius = rad;
+			ret->Axis = nrm;
+			return ret;
+		}
+
+		SphereSurfInfo^ ExtractSphereSurface(TopoDS_Shape ttt) {
+			auto loc = ttt.Location();
+
+			const auto& aFace = TopoDS::Face(ttt);
+			auto orient = aFace.Orientation();
+
+			TopLoc_Location aLocation;
+			Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
+			auto cyl = Handle(Geom_SphericalSurface)::DownCast(aSurf);
+
+			auto rtrimmed = Handle(Geom_RectangularTrimmedSurface)::DownCast(aSurf);
+			if (rtrimmed) {
+				auto basis = (*rtrimmed).BasisSurface();
+				auto cyl1 = Handle(Geom_SphericalSurface)::DownCast(basis);
+				if (cyl1) {
+					cyl = cyl1;
+				}
+
+			}
+
+			double rad = 0;
+			if (cyl) {
+				rad = (*cyl).Radius();
+			}
+
+			float aU = 0;
+			float aV = 0;
+
+			gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
+			Vector3d pos;
+
+			SphereSurfInfo^ ret = gcnew SphereSurfInfo();
+
+			GProp_GProps massProps;
+			BRepGProp::SurfaceProperties(ttt, massProps);
+			gp_Pnt gPt = massProps.CentreOfMass();
+
+
+			pos.X = aPnt.X();
+			pos.Y = aPnt.Y();
+			pos.Z = aPnt.Z();
+
+
+			ret->COM.X = gPt.X();
+			ret->COM.Y = gPt.Y();
+			ret->COM.Z = gPt.Z();
+			ret->Position = pos;
+			ret->Radius = rad;
+
+			return ret;
+		}
+
+		PlaneSurfInfo^ ExtractPlaneSurface(TopoDS_Shape ttt) {
+			auto loc = ttt.Location();
+
+			const auto& aFace = TopoDS::Face(ttt);
+			auto orient = aFace.Orientation();
+
+			TopLoc_Location aLocation;
+			Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
+
+			auto plane = Handle(Geom_Plane)::DownCast(aSurf);
+
+			auto pln = (*plane).Pln();
+
+			float aU = 0;
+			float aV = 0;
+			gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
+
+			Vector3d pos;
+			Vector3d nrm;
+
+			PlaneSurfInfo^ ret = gcnew PlaneSurfInfo();
+			GProp_GProps massProps;
+			BRepGProp::SurfaceProperties(ttt, massProps);
+			gp_Pnt gPt = massProps.CentreOfMass();
+
+			pos.X = aPnt.X();
+			pos.Y = aPnt.Y();
+			pos.Z = aPnt.Z();
+
+			auto dir = pln.Axis().Direction().Transformed(aLocation.Transformation());
+			if (orient == TopAbs_REVERSED) {
+				dir.Reverse();
+			}
+
+			nrm.X = dir.X();
+			nrm.Y = dir.Y();
+			nrm.Z = dir.Z();
+
+			ret->COM.X = gPt.X();
+			ret->COM.Y = gPt.Y();
+			ret->COM.Z = gPt.Z();
+			ret->Position = pos;
+			ret->Normal = nrm;
+
+			return ret;
+		}
 
 
 
+		ISurfInfo^ GetFaceInfo(IManagedObjHandle^ h1) {
+			return GetFaceInfo(h1->AisShapeBindId, h1);
 
-		for (TopExp_Explorer exp(shape0, TopAbs_EDGE); exp.More(); exp.Next()) {
-			auto ttt = exp.Current();
-			auto ind = AddOrGetShapeIndex(ttt);
-			ttt = ttt.Located(object1->LocalTransformation());
+		}
+		ISurfInfo^ GetFaceInfo(int parentId, IManagedObjHandle^ h1) {
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(parentId);
+			auto temp1 = Handle(AIS_Shape)::DownCast(object1);
+			if (temp1.IsNull()) {
+				return nullptr;
+			}
+			TopoDS_Shape shape0 = temp1->Shape();
+			BRepTools_History htool;
+			auto modified = shape0.Located(object1->Transformation());
 
-			const auto& edgee = TopoDS::Edge(ttt);
+			//// Create a map to store the extracted sub-shapes
+			//TopTools_IndexedMapOfShape myFacesMap;
 
-			if (edgee.IsNull())
-				continue;
+			//// Map all edges from 'myShape' into 'myEdgesMap'
+			//TopExp::MapShapes(shape0, TopAbs_FACE, myFacesMap);
+			//myFacesMap.
+			//// Now, 'myEdgesMap' contains all the edges found within 'myShape'.
+			//// You can iterate through 'myEdgesMap' to access each edge:
+			//for (Standard_Integer i = 1; i <= myFacesMap.Extent(); ++i) {
+			//	const TopoDS_Shape& anFace = myFacesMap(i);
+			//	// Do something with 'anEdge'
+			//}
 
-			if (ind == hh.bindId) {
+			for (TopExp_Explorer exp(shape0, TopAbs_FACE); exp.More(); exp.Next())
+			{
+				auto ttt = exp.Current();
+				const auto& aFace1 = TopoDS::Face(ttt);
+
+				if (aFace1.IsNull())
+					continue;
+
+				auto ind = GetShapeIndex(ttt);
+				if (ind != hh.bindId)
+					continue;
+
+				for (TopExp_Explorer exp2(modified, TopAbs_FACE); exp2.More(); exp2.Next())
+				{
+					auto ttt2 = exp2.Current();
+					if (ttt.IsPartner(ttt2)) {
+						htool.AddModified(ttt, ttt2);
+						break;
+					}
+				}
+
+				TopTools_ListOfShape modifiedFaces = htool.Modified(ttt);
+
+				ttt = modifiedFaces.First();
+				//ttt = ttt.Located(object1->LocalTransformation());
+
+				auto loc = ttt.Location();
+
+				const auto& aFace = TopoDS::Face(ttt);
+				auto orient = aFace.Orientation();
+
+				TopLoc_Location aLocation;
+				Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
+
+				GeomAdaptor_Surface theGASurface(aSurf);
+
+				if (aFace.IsNull())
+					continue;
+
+				if (ind == hh.bindId) {
+					switch (theGASurface.GetType())
+					{
+					case GeomAbs_Plane:
+					{
+						auto ret = ExtractPlaneSurface(ttt);
+						ret->BindId = ind;
+						ret->AisShapeBindId = parentId;
+						return ret;
+					}
+					case GeomAbs_Cylinder:
+					{
+						auto ret = ExtractCylinderSurface(ttt);
+						ret->BindId = ind;
+						ret->AisShapeBindId = parentId;
+
+						return ret;
+					}
+					case GeomAbs_Sphere:
+					{
+						auto ret = ExtractSphereSurface(ttt);
+						ret->BindId = ind;
+						ret->AisShapeBindId = parentId;
+
+						return ret;
+					}
+					}
+				}
+			}
+			return nullptr;
+		}
+
+		List<IVertInfo^>^ GetVertsInfo(IManagedObjHandle^ h1) {
+			List<IVertInfo^>^ rett = gcnew List<IVertInfo^>();
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(hh);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			auto indp = AddOrGetShapeIndex(shape0);
+
+			for (TopExp_Explorer exp(shape0, TopAbs_VERTEX); exp.More(); exp.Next())
+			{
+				auto ttt = exp.Current();
+				auto ind = AddOrGetShapeIndex(ttt);
+
+				ttt = ttt.Located(object1->LocalTransformation());
+
+				auto loc = ttt.Location();
+
+				const auto& aVert = TopoDS::Vertex(ttt);
+				auto orient = aVert.Orientation();
+
+				if (aVert.IsNull())
+					continue;
+
+				VertInfo^ toAdd = gcnew VertInfo();
+
+				if (toAdd != nullptr) {
+					toAdd->BindId = ind;
+					toAdd->AisShapeBindId = indp;
+					rett->Add(toAdd);
+				}
+			}
+			return rett;
+		}
+
+		List<ISurfInfo^>^ GetFacesInfo(IManagedObjHandle^ h1) {
+			List<ISurfInfo^>^ rett = gcnew List<ISurfInfo^>();
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(hh);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			auto indp = AddOrGetShapeIndex(shape0);
+
+			for (TopExp_Explorer exp(shape0, TopAbs_FACE); exp.More(); exp.Next())
+			{
+				auto ttt = exp.Current();
+				auto ind = AddOrGetShapeIndex(ttt);
+
+				ttt = ttt.Located(object1->LocalTransformation());
+
+				auto loc = ttt.Location();
+
+				const auto& aFace = TopoDS::Face(ttt);
+				auto orient = aFace.Orientation();
+
+				TopLoc_Location aLocation;
+				Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
+
+				GeomAdaptor_Surface theGASurface(aSurf);
+
+				auto tt = ttt.TShape();
+
+
+				if (aFace.IsNull())
+					continue;
+
+
+				auto tp = theGASurface.GetType();
+				SurfInfo^ toAdd = nullptr;
+				switch (theGASurface.GetType()) {
+				case GeomAbs_Plane:
+				{
+					toAdd = ExtractPlaneSurface(ttt);
+				}
+				break;
+				case GeomAbs_Cylinder:
+				{
+					toAdd = ExtractCylinderSurface(ttt);
+				}
+				break;
+				case GeomAbs_Sphere:
+				{
+					toAdd = ExtractSphereSurface(ttt);
+				}
+				break;
+				}
+				if (toAdd != nullptr) {
+					toAdd->BindId = ind;
+					toAdd->AisShapeBindId = indp;
+					rett->Add(toAdd);
+				}
+			}
+			return rett;
+		}
+
+		List<IEdgeInfo^>^ GetEdgesInfo(IManagedObjHandle^ h1) {
+			ManagedObjHandle^ hh = safe_cast<ManagedObjHandle^>(h1);
+			return GetEdgesInfo(hh);
+		}
+
+		List<IEdgeInfo^>^ GetEdgesInfo(ManagedObjHandle^ h1) {
+			List<IEdgeInfo^>^ rett = gcnew List<IEdgeInfo^>();
+			auto hh = h1->ToObjHandle();
+			auto object1 = impl->findObject(hh);
+			//const auto* object1 = impl->getObject(hh);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			//shape0 = shape0.Located(object1->LocalTransformation());
+			int indp = AddOrGetShapeIndex(shape0);
+
+			for (TopExp_Explorer exp(shape0, TopAbs_EDGE); exp.More(); exp.Next()) {
+				const auto _ttt = exp.Current();
+				int ind = AddOrGetShapeIndex(_ttt);
+				auto ttt = _ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Edge(ttt);
+
+				if (edgee.IsNull())
+					continue;
 
 				GProp_GProps massProps;
 				BRepGProp::LinearProperties(ttt, massProps);
@@ -4420,6 +4815,10 @@ public:
 				//Analysis of Edge
 				Standard_Real First, Last;
 				Handle(Geom_Curve) curve = BRep_Tool::Curve(edgee, First, Last); //Extract the curve from the edge
+
+				if (curve.IsNull())
+					continue;
+
 				GeomAdaptor_Curve aAdaptedCurve(curve);
 				GeomAbs_CurveType curveType = aAdaptedCurve.GetType();
 
@@ -4432,6 +4831,7 @@ public:
 
 
 				EdgeInfo^ ret = nullptr;
+
 				if (curveType == GeomAbs_Circle) {
 					auto ret2 = gcnew CircleEdgeInfo();
 					Handle(Geom_Circle) C2 = Handle(Geom_Circle)::DownCast(curve);
@@ -4443,8 +4843,10 @@ public:
 				}
 				else
 					ret = gcnew EdgeInfo();
+
 				ret->BindId = ind;
-				ret->AisShapeBindId = parentId;
+				ret->AisShapeBindId = indp;
+
 				ret->Length = len;
 				ret->CurveType = (CurveType)curveType;
 
@@ -4459,610 +4861,59 @@ public:
 				ret->End.X = pnt2.X();
 				ret->End.Y = pnt2.Y();
 				ret->End.Z = pnt2.Z();
-				return ret;
+
+				rett->Add(ret);
+
 			}
-		}
-		return nullptr;
-	}
-
-	CylinderSurfInfo^ ExtractCylinderSurface(TopoDS_Shape ttt) {
-		auto loc = ttt.Location();
-
-		const auto& aFace = TopoDS::Face(ttt);
-		auto orient = aFace.Orientation();
-
-		TopLoc_Location aLocation;
-		Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
-
-		auto bsurf = Handle(Geom_BoundedSurface)::DownCast(aSurf);
-		auto swept = Handle(Geom_SweptSurface)::DownCast(aSurf);
-		auto cyl = Handle(Geom_CylindricalSurface)::DownCast(aSurf);
-		auto rev = Handle(Geom_SurfaceOfRevolution)::DownCast(aSurf);
-		auto rtrimmed = Handle(Geom_RectangularTrimmedSurface)::DownCast(aSurf);
-		if (rtrimmed) {
-			auto basis = (*rtrimmed).BasisSurface();
-			auto cyl1 = Handle(Geom_CylindricalSurface)::DownCast(basis);
-			if (cyl1) {
-				cyl = cyl1;
-			}
+			return rett;
 		}
 
-		double rad = 0;
-		if (cyl) {
-			rad = (*cyl).Radius();
-		}
-		else if (rev) {
-			rad = (*cyl).Radius();
-		}
-		else if (swept) {
-			rad = (*cyl).Radius();
-		}
-		else if (bsurf) {
-			rad = (*cyl).Radius();
-		}
-
-
-		auto dir = cyl->Axis().Direction().Transformed(aLocation.Transformation());
-		if (orient == TopAbs_REVERSED) {
-			dir.Reverse();
-		}
-		float aU = 0;
-		float aV = 0;
-
-		gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
-		Vector3d pos;
-		Vector3d nrm;
-
-		CylinderSurfInfo^ ret = gcnew CylinderSurfInfo();
-
-		GProp_GProps massProps;
-		BRepGProp::SurfaceProperties(ttt, massProps);
-		gp_Pnt gPt = massProps.CentreOfMass();
-
-		nrm.X = dir.X();
-		nrm.Y = dir.Y();
-		nrm.Z = dir.Z();
-
-		pos.X = aPnt.X();
-		pos.Y = aPnt.Y();
-		pos.Z = aPnt.Z();
-
-		ret->COM.X = gPt.X();
-		ret->COM.Y = gPt.Y();
-		ret->COM.Z = gPt.Z();
-		ret->Position = pos;
-		ret->Radius = rad;
-		ret->Axis = nrm;
-		return ret;
-	}
-
-	SphereSurfInfo^ ExtractSphereSurface(TopoDS_Shape ttt) {
-		auto loc = ttt.Location();
-
-		const auto& aFace = TopoDS::Face(ttt);
-		auto orient = aFace.Orientation();
-
-		TopLoc_Location aLocation;
-		Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
-		auto cyl = Handle(Geom_SphericalSurface)::DownCast(aSurf);
-
-		auto rtrimmed = Handle(Geom_RectangularTrimmedSurface)::DownCast(aSurf);
-		if (rtrimmed) {
-			auto basis = (*rtrimmed).BasisSurface();
-			auto cyl1 = Handle(Geom_SphericalSurface)::DownCast(basis);
-			if (cyl1) {
-				cyl = cyl1;
-			}
-
-		}
-
-		double rad = 0;
-		if (cyl) {
-			rad = (*cyl).Radius();
-		}
-
-		float aU = 0;
-		float aV = 0;
-
-		gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
-		Vector3d pos;
-
-		SphereSurfInfo^ ret = gcnew SphereSurfInfo();
-
-		GProp_GProps massProps;
-		BRepGProp::SurfaceProperties(ttt, massProps);
-		gp_Pnt gPt = massProps.CentreOfMass();
-
-
-		pos.X = aPnt.X();
-		pos.Y = aPnt.Y();
-		pos.Z = aPnt.Z();
-
-
-		ret->COM.X = gPt.X();
-		ret->COM.Y = gPt.Y();
-		ret->COM.Z = gPt.Z();
-		ret->Position = pos;
-		ret->Radius = rad;
-
-		return ret;
-	}
-
-	PlaneSurfInfo^ ExtractPlaneSurface(TopoDS_Shape ttt) {
-		auto loc = ttt.Location();
-
-		const auto& aFace = TopoDS::Face(ttt);
-		auto orient = aFace.Orientation();
-
-		TopLoc_Location aLocation;
-		Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
-
-		auto plane = Handle(Geom_Plane)::DownCast(aSurf);
-
-		auto pln = (*plane).Pln();
-
-		float aU = 0;
-		float aV = 0;
-		gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
-
-		Vector3d pos;
-		Vector3d nrm;
-
-		PlaneSurfInfo^ ret = gcnew PlaneSurfInfo();
-		GProp_GProps massProps;
-		BRepGProp::SurfaceProperties(ttt, massProps);
-		gp_Pnt gPt = massProps.CentreOfMass();
-
-		pos.X = aPnt.X();
-		pos.Y = aPnt.Y();
-		pos.Z = aPnt.Z();
-
-		auto dir = pln.Axis().Direction().Transformed(aLocation.Transformation());
-		if (orient == TopAbs_REVERSED) {
-			dir.Reverse();
-		}
-
-		nrm.X = dir.X();
-		nrm.Y = dir.Y();
-		nrm.Z = dir.Z();
-
-		ret->COM.X = gPt.X();
-		ret->COM.Y = gPt.Y();
-		ret->COM.Z = gPt.Z();
-		ret->Position = pos;
-		ret->Normal = nrm;
-
-		return ret;
-	}
-
-		ISurfInfo^ GetFaceInfo(ManagedObjHandle^ h1) {
-		return GetFaceInfo(h1->AisShapeBindId, h1);
-	}
-
-		ISurfInfo^ GetFaceInfo(int parentId, ManagedObjHandle^ h1) {
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(parentId);
-		auto temp1 = Handle(AIS_Shape)::DownCast(object1);
-		if (temp1.IsNull()) {
-			return nullptr;
-		}
-		TopoDS_Shape shape0 = temp1->Shape();
-		BRepTools_History htool;
-		auto modified = shape0.Located(object1->Transformation());
-
-		//// Create a map to store the extracted sub-shapes
-		//TopTools_IndexedMapOfShape myFacesMap;
-
-		//// Map all edges from 'myShape' into 'myEdgesMap'
-		//TopExp::MapShapes(shape0, TopAbs_FACE, myFacesMap);
-		//myFacesMap.
-		//// Now, 'myEdgesMap' contains all the edges found within 'myShape'.
-		//// You can iterate through 'myEdgesMap' to access each edge:
-		//for (Standard_Integer i = 1; i <= myFacesMap.Extent(); ++i) {
-		//	const TopoDS_Shape& anFace = myFacesMap(i);
-		//	// Do something with 'anEdge'
-		//}
-			
-		for (TopExp_Explorer exp(shape0, TopAbs_FACE); exp.More(); exp.Next())
+		IManagedObjHandle^ MakeChamfer(IManagedObjHandle^ h1, double s)
 		{
-			auto ttt = exp.Current();
-			const auto& aFace1 = TopoDS::Face(ttt);
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(hh);
+			std::vector<ObjHandle> edges;
+			impl->GetSelectedEdges(edges);
+			//auto edge = impl->getSelectedEdge(myAISContext().get());
 
-			if (aFace1.IsNull())
-				continue;
+			//const auto* object2 = impl->getObject(edge);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
 
-			auto ind = GetShapeIndex(ttt);
-			if (ind != hh.bindId)
-				continue;
+			BRepFilletAPI_MakeChamfer chamferOp(shape0);
 
-			for (TopExp_Explorer exp2(modified, TopAbs_FACE); exp2.More(); exp2.Next())
-			{
-				auto ttt2 = exp2.Current();
-				if (ttt.IsPartner(ttt2)) {
-					htool.AddModified(ttt, ttt2);
-					break;
+			bool b = false;
+			for (TopExp_Explorer edgeExplorer(shape0, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
+				auto ttt = edgeExplorer.Current();
+				auto ind = GetShapeIndex(ttt);
+				//ttt = ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Edge(ttt);
+
+
+				if (edgee.IsNull()) {
+					continue;
+				}
+				for (auto edge : edges) {
+					//todo fix
+					//if (ttt3 == edge.handleT) 
+					if (ind == edge.bindId)
+					{
+						chamferOp.Add(s, edgee);
+						b = true;
+						break;
+					}
 				}
 			}
 
-			TopTools_ListOfShape modifiedFaces = htool.Modified(ttt);
-
-			ttt = modifiedFaces.First();
-			//ttt = ttt.Located(object1->LocalTransformation());
-
-			auto loc = ttt.Location();
-
-			const auto& aFace = TopoDS::Face(ttt);
-			auto orient = aFace.Orientation();
-
-			TopLoc_Location aLocation;
-			Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
-
-			GeomAdaptor_Surface theGASurface(aSurf);
-
-			if (aFace.IsNull())
-				continue;
-
-			if (ind == hh.bindId) {
-				switch (theGASurface.GetType())
-				{
-				case GeomAbs_Plane:
-				{
-					auto ret = ExtractPlaneSurface(ttt);
-					ret->BindId = ind;
-					ret->AisShapeBindId = parentId;
-					return ret;
-				}
-				case GeomAbs_Cylinder:
-				{
-					auto ret = ExtractCylinderSurface(ttt);
-					ret->BindId = ind;
-					ret->AisShapeBindId = parentId;
-
-					return ret;
-				}
-				case GeomAbs_Sphere:
-				{
-					auto ret = ExtractSphereSurface(ttt);
-					ret->BindId = ind;
-					ret->AisShapeBindId = parentId;
-
-					return ret;
-				}
-				}
-			}
-		}
-		return nullptr;
-	}
-
-	List<VertInfo^>^ GetVertsInfo(ManagedObjHandle^ h1) {
-		List<VertInfo^>^ rett = gcnew List<VertInfo^>();
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(hh);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		auto indp = AddOrGetShapeIndex(shape0);
-
-		for (TopExp_Explorer exp(shape0, TopAbs_VERTEX); exp.More(); exp.Next())
-		{
-			auto ttt = exp.Current();
-			auto ind = AddOrGetShapeIndex(ttt);
-
-			ttt = ttt.Located(object1->LocalTransformation());
-
-			auto loc = ttt.Location();
-
-			const auto& aVert = TopoDS::Vertex(ttt);
-			auto orient = aVert.Orientation();
-
-			if (aVert.IsNull())
-				continue;
-
-			VertInfo^ toAdd = gcnew VertInfo();
-
-			if (toAdd != nullptr) {
-				toAdd->BindId = ind;
-				toAdd->AisShapeBindId = indp;
-				rett->Add(toAdd);
-			}
-		}
-		return rett;
-	}
-
-		List<ISurfInfo^>^ GetFacesInfo(ManagedObjHandle^ h1) {
-			List<ISurfInfo^>^ rett = gcnew List<ISurfInfo^>();
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(hh);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		auto indp = AddOrGetShapeIndex(shape0);
-
-		for (TopExp_Explorer exp(shape0, TopAbs_FACE); exp.More(); exp.Next())
-		{
-			auto ttt = exp.Current();
-			auto ind = AddOrGetShapeIndex(ttt);
-
-			ttt = ttt.Located(object1->LocalTransformation());
-
-			auto loc = ttt.Location();
-
-			const auto& aFace = TopoDS::Face(ttt);
-			auto orient = aFace.Orientation();
-
-			TopLoc_Location aLocation;
-			Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
-
-			GeomAdaptor_Surface theGASurface(aSurf);
-
-			auto tt = ttt.TShape();
-
-
-			if (aFace.IsNull())
-				continue;
-
-
-			auto tp = theGASurface.GetType();
-			SurfInfo^ toAdd = nullptr;
-			switch (theGASurface.GetType()) {
-			case GeomAbs_Plane:
-			{
-				toAdd = ExtractPlaneSurface(ttt);
-			}
-			break;
-			case GeomAbs_Cylinder:
-			{
-				toAdd = ExtractCylinderSurface(ttt);
-			}
-			break;
-			case GeomAbs_Sphere:
-			{
-				toAdd = ExtractSphereSurface(ttt);
-			}
-			break;
-			}
-			if (toAdd != nullptr) {
-				toAdd->BindId = ind;
-				toAdd->AisShapeBindId = indp;
-				rett->Add(toAdd);
-			}
-		}
-		return rett;
-	}
-
-	List<EdgeInfo^>^ GetEdgesInfo(ManagedObjHandle^ h1) {
-		List<EdgeInfo^>^ rett = gcnew List<EdgeInfo^>();
-		auto hh = h1->ToObjHandle();
-		auto object1 = impl->findObject(hh);
-		//const auto* object1 = impl->getObject(hh);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		//shape0 = shape0.Located(object1->LocalTransformation());
-		int indp = AddOrGetShapeIndex(shape0);
-
-		for (TopExp_Explorer exp(shape0, TopAbs_EDGE); exp.More(); exp.Next()) {
-			const auto _ttt = exp.Current();
-			int ind = AddOrGetShapeIndex(_ttt);
-			auto ttt = _ttt.Located(object1->LocalTransformation());
-
-			const auto& edgee = TopoDS::Edge(ttt);
-
-			if (edgee.IsNull())
-				continue;
-
-			GProp_GProps massProps;
-			BRepGProp::LinearProperties(ttt, massProps);
-			auto len = massProps.Mass();
-
-			gp_Pnt gPt = massProps.CentreOfMass();
-
-			//Analysis of Edge
-			Standard_Real First, Last;
-			Handle(Geom_Curve) curve = BRep_Tool::Curve(edgee, First, Last); //Extract the curve from the edge
-
-			if (curve.IsNull())
-				continue;
-
-			GeomAdaptor_Curve aAdaptedCurve(curve);
-			GeomAbs_CurveType curveType = aAdaptedCurve.GetType();
-
-			gp_Pnt pnt1, pnt2;
-			aAdaptedCurve.D0(First, pnt1);
-			aAdaptedCurve.D0(Last, pnt2);
-			int nPoles = 2;
-			if (curveType == GeomAbs_BezierCurve || curveType == GeomAbs_BSplineCurve)
-				nPoles = aAdaptedCurve.NbPoles();
-
-
-			EdgeInfo^ ret = nullptr;
-
-			if (curveType == GeomAbs_Circle) {
-				auto ret2 = gcnew CircleEdgeInfo();
-				Handle(Geom_Circle) C2 = Handle(Geom_Circle)::DownCast(curve);
-				if (!C2.IsNull())
-				{
-					ret2->Radius = C2->Circ().Radius();
-				}
-				ret = ret2;
-			}
-			else
-				ret = gcnew EdgeInfo();
-
-			ret->BindId = ind;
-			ret->AisShapeBindId = indp;
-
-			ret->Length = len;
-			ret->CurveType = (CurveType)curveType;
-
-			ret->COM.X = gPt.X();
-			ret->COM.Y = gPt.Y();
-			ret->COM.Z = gPt.Z();
-
-			ret->Start.X = pnt1.X();
-			ret->Start.Y = pnt1.Y();
-			ret->Start.Z = pnt1.Z();
-
-			ret->End.X = pnt2.X();
-			ret->End.Y = pnt2.Y();
-			ret->End.Z = pnt2.Z();
-
-			rett->Add(ret);
-
-		}
-		return rett;
-	}
-
-	ManagedObjHandle^ MakeChamfer(ManagedObjHandle^ h1, double s)
-	{
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(hh);
-		std::vector<ObjHandle> edges;
-		impl->GetSelectedEdges(edges);
-		//auto edge = impl->getSelectedEdge(myAISContext().get());
-
-		//const auto* object2 = impl->getObject(edge);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-
-		BRepFilletAPI_MakeChamfer chamferOp(shape0);
-
-		bool b = false;
-		for (TopExp_Explorer edgeExplorer(shape0, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
-			auto ttt = edgeExplorer.Current();
-			auto ind = GetShapeIndex(ttt);
-			//ttt = ttt.Located(object1->LocalTransformation());
-
-			const auto& edgee = TopoDS::Edge(ttt);
-
-
-			if (edgee.IsNull()) {
-				continue;
-			}
-			for (auto edge : edges) {
-				//todo fix
-				//if (ttt3 == edge.handleT) 
-				if (ind == edge.bindId)
-				{
-					chamferOp.Add(s, edgee);
-					b = true;
-					break;
-				}
-			}
-		}
-
-		if (!b)
-			return nullptr;
-
-		chamferOp.Build();
-		auto shape = chamferOp.Shape();
-		auto trsf = GetObjectMatrix(h1);
-		shape = BRepBuilderAPI_Transform(shape, trsf, Standard_True);
-
-		auto ais = new AIS_Shape(shape);
-		myAISContext()->Display(ais, false);
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ Sphere(double x1, double y1, double z1, double size) {
-		return Sphere(gp_Pnt(x1, y1, z1), size);
-	}
-
-	ManagedObjHandle^ Sphere(gp_Pnt center, double radius) {
-
-		auto	sphere = BRepPrimAPI_MakeSphere(center, radius).Shape();
-
-		auto ais = new AIS_Shape(sphere);
-		myAISContext()->Display(ais, false);
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ Pipe(double x1, double y1, double z1, double x2, double y2, double z2, double size) {
-		return Pipe(gp_Pnt(x1, y1, z1), gp_Pnt(x2, y2, z2), size);
-	}
-
-	ManagedObjHandle^ Pipe(gp_Pnt point1, gp_Pnt point2, double size) {
-
-
-		auto	makeWire = BRepBuilderAPI_MakeWire();
-		auto edge = BRepBuilderAPI_MakeEdge(point1, point2).Edge();
-		makeWire.Add(edge);
-		makeWire.Build();
-		auto wire = makeWire.Wire();
-
-		auto dir = gp_Dir(point2.X() - point1.X(), point2.Y() - point1.Y(), point2.Z() - point1.Z());
-		auto circle = gp_Circ(gp_Ax2(point1, dir), size);
-		auto profile_edge = BRepBuilderAPI_MakeEdge(circle).Edge();
-		auto profile_wire = BRepBuilderAPI_MakeWire(profile_edge).Wire();
-		auto profile_face = BRepBuilderAPI_MakeFace(profile_wire).Face();
-		auto pipe = BRepOffsetAPI_MakePipe(wire, profile_face).Shape();
-
-		auto ais = new AIS_Shape(pipe);
-		myAISContext()->Display(ais, false);
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ MakePipe(ManagedObjHandle^ h1, double s)
-	{
-
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(hh);
-
-
-		//auto edge = impl->getSelectedEdge(myAISContext().get());
-
-		//const auto* object2 = impl->getObject(edge);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		shape0 = shape0.Located(object1->LocalTransformation());
-		gp_Pnt p1(0, 0, 0);
-		auto dir = gp_Dir(0, 1, 0);
-
-		//get first point of wire
-		for (TopExp_Explorer exp(shape0, TopAbs_EDGE); exp.More(); exp.Next())
-		{
-			const auto ttt = exp.Current();
-			auto loc = ttt.Location();
-
-			const auto& edge = TopoDS::Edge(ttt);
-			//Analysis of Edge
-			Standard_Real First, Last;
-			Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, First, Last); //Extract the curve from the edge
-			GeomAdaptor_Curve aAdaptedCurve(curve);
-			GeomAbs_CurveType curveType = aAdaptedCurve.GetType();
-
-			gp_Pnt pnt1, pnt2;
-			aAdaptedCurve.D0(First, pnt1);
-			aAdaptedCurve.D0(First + 0.01, pnt2);
-			p1 = pnt1;
-			dir = gp_Dir(pnt2.X() - pnt1.X(), pnt2.Y() - pnt1.Y(), pnt2.Z() - pnt1.Z());
-		}
-
-
-		auto circle = gp_Circ(gp_Ax2(p1, dir), s);
-		auto profile_edge = BRepBuilderAPI_MakeEdge(circle).Edge();
-		auto profile_wire = BRepBuilderAPI_MakeWire(profile_edge).Wire();
-		auto profile_face = BRepBuilderAPI_MakeFace(profile_wire).Face();
-		for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next())
-		{
-			const auto ttt = exp.Current();
-			auto loc = ttt.Location();
-
-			const auto& baseWire = TopoDS::Wire(ttt);
-
-			//BRepOffsetAPI_MakePipeShell makePipe(baseWire, profile_face);
-			BRepOffsetAPI_MakePipeShell makePipe(baseWire);
-			makePipe.SetMode(true);
-			makePipe.Add(profile_wire, true, true);
-			makePipe.SetTransitionMode(BRepBuilderAPI_RightCorner);
-			makePipe.Build();
-
-			makePipe.MakeSolid();
-			auto ais = new AIS_Shape(makePipe.Shape());
+			if (!b)
+				return nullptr;
+
+			chamferOp.Build();
+			auto shape = chamferOp.Shape();
+			auto trsf = GetObjectMatrix(h1);
+			shape = BRepBuilderAPI_Transform(shape, trsf, Standard_True);
+
+			auto ais = new AIS_Shape(shape);
 			myAISContext()->Display(ais, false);
 			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
 
@@ -5071,610 +4922,718 @@ public:
 			return hhh;
 		}
 
-		return nullptr;
-	}
-
-	ManagedObjHandle^ HelixWire(double radius, double radius2, double height, double turns) {
-
-		std::vector<gp_Pnt> vec;
-		auto ang = turns * M_PI * 2;
-		double step = 0.1;
-		auto radDelta = radius2 - radius;
-		for (double i = 0; i <= ang; i += step)
-		{
-			auto t = (i / ang);
-			auto xx = (radius + t * radDelta) * cos(i);
-			auto yy = (radius + t * radDelta) * sin(i);
-			//	auto xx = i;
-			//	auto yy = 0;
-			vec.push_back(gp_Pnt(xx, yy, height * t));
-
+		IManagedObjHandle^ Sphere(double x1, double y1, double z1, double size) {
+			return Sphere(gp_Pnt(x1, y1, z1), size);
 		}
 
-		TColgp_Array1OfPnt aPoints(0,
-			vec.size() - 1);
-		for (size_t i = 0; i < vec.size(); i++)
-		{
-			aPoints(i) = vec[i];
+		IManagedObjHandle^ Sphere(gp_Pnt center, double radius) {
+
+			auto	sphere = BRepPrimAPI_MakeSphere(center, radius).Shape();
+
+			auto ais = new AIS_Shape(sphere);
+			myAISContext()->Display(ais, false);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
 		}
 
-
-		gp_Pnt center = gp::Origin();
-		gp_Dir axis = gp::DZ();
-
-		Handle(Geom_CylindricalSurface)
-			cyl = new Geom_CylindricalSurface(gp_Ax2(center, axis), radius);
-		GeomAPI_PointsToBSpline approx(aPoints);
-		Handle(Geom_BSplineCurve)  c = approx.Curve();
-
-		/*TopoDS_Edge                 edge1 = BRepBuilderAPI_MakeEdge(c, cyl,
-			0.0,
-			10.0);*/
-		TopoDS_Edge ts2 = BRepBuilderAPI_MakeEdge(c);
-		auto profile_wire = BRepBuilderAPI_MakeWire(ts2).Wire();
-
-		//BRepLib::BuildCurves3d(ts2);
-		auto ais2 = new AIS_Shape(profile_wire);
-		myAISContext()->Display(ais2, false);
-
-		ManagedObjHandle^ hhh2 = gcnew ManagedObjHandle();
-
-		auto hn2 = GetHandle(*ais2);
-		hhh2->FromObjHandle(hn2);
-		return hhh2;//	myContext->Display(new AIS_Shape(ts)
-	}
-
-	ManagedObjHandle^ MakeFillet2d(ManagedObjHandle^ h1, double s)
-	{
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(hh);
-		std::vector<ObjHandle> vertices;
-		impl->GetSelectedVertices(vertices);
-		//auto edge = impl->getSelectedEdge(myAISContext().get());
-
-		//const auto* object2 = impl->getObject(edge);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		shape0 = shape0.Located(object1->LocalTransformation());
-
-		BRepFilletAPI_MakeFillet2d filletOp;
-		for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next())
-		{
-			const auto ttt = exp.Current();
-			auto loc = ttt.Location();
-
-			const auto& baseWire = TopoDS::Wire(ttt);
-			bool isPlannar = true;
-			TopoDS_Face baseFace = BRepBuilderAPI_MakeFace(baseWire, isPlannar);
-			filletOp.Init(baseFace);
+		IManagedObjHandle^ Pipe(double x1, double y1, double z1, double x2, double y2, double z2, double size) {
+			return Pipe(gp_Pnt(x1, y1, z1), gp_Pnt(x2, y2, z2), size);
 		}
 
+		IManagedObjHandle^ Pipe(gp_Pnt point1, gp_Pnt point2, double size) {
 
 
-		bool b = false;
-		for (TopExp_Explorer edgeExplorer(shape0, TopAbs_VERTEX); edgeExplorer.More(); edgeExplorer.Next()) {
-			const auto ttt = edgeExplorer.Current();
-			const auto& _vertex = TopoDS::Vertex(ttt);
-			auto tt = ttt.TShape();
+			auto	makeWire = BRepBuilderAPI_MakeWire();
+			auto edge = BRepBuilderAPI_MakeEdge(point1, point2).Edge();
+			makeWire.Add(edge);
+			makeWire.Build();
+			auto wire = makeWire.Wire();
 
-			if (_vertex.IsNull()) {
-				continue;
+			auto dir = gp_Dir(point2.X() - point1.X(), point2.Y() - point1.Y(), point2.Z() - point1.Z());
+			auto circle = gp_Circ(gp_Ax2(point1, dir), size);
+			auto profile_edge = BRepBuilderAPI_MakeEdge(circle).Edge();
+			auto profile_wire = BRepBuilderAPI_MakeWire(profile_edge).Wire();
+			auto profile_face = BRepBuilderAPI_MakeFace(profile_wire).Face();
+			auto pipe = BRepOffsetAPI_MakePipe(wire, profile_face).Shape();
+
+			auto ais = new AIS_Shape(pipe);
+			myAISContext()->Display(ais, false);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		IManagedObjHandle^ MakePipe(IManagedObjHandle^ h1, double s)
+		{
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(hh);
+
+			//auto edge = impl->getSelectedEdge(myAISContext().get());
+
+			//const auto* object2 = impl->getObject(edge);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			shape0 = shape0.Located(object1->LocalTransformation());
+			gp_Pnt p1(0, 0, 0);
+			auto dir = gp_Dir(0, 1, 0);
+
+			//get first point of wire
+			for (TopExp_Explorer exp(shape0, TopAbs_EDGE); exp.More(); exp.Next())
+			{
+				const auto ttt = exp.Current();
+				auto loc = ttt.Location();
+
+				const auto& edge = TopoDS::Edge(ttt);
+				//Analysis of Edge
+				Standard_Real First, Last;
+				Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, First, Last); //Extract the curve from the edge
+				GeomAdaptor_Curve aAdaptedCurve(curve);
+				GeomAbs_CurveType curveType = aAdaptedCurve.GetType();
+
+				gp_Pnt pnt1, pnt2;
+				aAdaptedCurve.D0(First, pnt1);
+				aAdaptedCurve.D0(First + 0.01, pnt2);
+				p1 = pnt1;
+				dir = gp_Dir(pnt2.X() - pnt1.X(), pnt2.Y() - pnt1.Y(), pnt2.Z() - pnt1.Z());
 			}
 
-			for (int i = 0; i < vertices.size(); i++)
+
+			auto circle = gp_Circ(gp_Ax2(p1, dir), s);
+			auto profile_edge = BRepBuilderAPI_MakeEdge(circle).Edge();
+			auto profile_wire = BRepBuilderAPI_MakeWire(profile_edge).Wire();
+			auto profile_face = BRepBuilderAPI_MakeFace(profile_wire).Face();
+			for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next())
 			{
-				auto& vertex = vertices[i];
-				//todo fix
-				//if (ttt3 == vertex.handleT) 
+				const auto ttt = exp.Current();
+				auto loc = ttt.Location();
+
+				const auto& baseWire = TopoDS::Wire(ttt);
+
+				//BRepOffsetAPI_MakePipeShell makePipe(baseWire, profile_face);
+				BRepOffsetAPI_MakePipeShell makePipe(baseWire);
+				makePipe.SetMode(true);
+				makePipe.Add(profile_wire, true, true);
+				makePipe.SetTransitionMode(BRepBuilderAPI_RightCorner);
+				makePipe.Build();
+
+				makePipe.MakeSolid();
+				auto ais = new AIS_Shape(makePipe.Shape());
+				myAISContext()->Display(ais, false);
+				ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+				auto hn = GetHandle(*ais);
+				hhh->FromObjHandle(hn);
+				return hhh;
+			}
+
+			return nullptr;
+		}
+
+		IManagedObjHandle^ HelixWire(double radius, double radius2, double height, double turns) {
+
+			std::vector<gp_Pnt> vec;
+			auto ang = turns * M_PI * 2;
+			double step = 0.1;
+			auto radDelta = radius2 - radius;
+			for (double i = 0; i <= ang; i += step)
+			{
+				auto t = (i / ang);
+				auto xx = (radius + t * radDelta) * cos(i);
+				auto yy = (radius + t * radDelta) * sin(i);
+				//	auto xx = i;
+				//	auto yy = 0;
+				vec.push_back(gp_Pnt(xx, yy, height * t));
+
+			}
+
+			TColgp_Array1OfPnt aPoints(0,
+				vec.size() - 1);
+			for (size_t i = 0; i < vec.size(); i++)
+			{
+				aPoints(i) = vec[i];
+			}
+
+
+			gp_Pnt center = gp::Origin();
+			gp_Dir axis = gp::DZ();
+
+			Handle(Geom_CylindricalSurface)
+				cyl = new Geom_CylindricalSurface(gp_Ax2(center, axis), radius);
+			GeomAPI_PointsToBSpline approx(aPoints);
+			Handle(Geom_BSplineCurve)  c = approx.Curve();
+
+			/*TopoDS_Edge                 edge1 = BRepBuilderAPI_MakeEdge(c, cyl,
+				0.0,
+				10.0);*/
+			TopoDS_Edge ts2 = BRepBuilderAPI_MakeEdge(c);
+			auto profile_wire = BRepBuilderAPI_MakeWire(ts2).Wire();
+
+			//BRepLib::BuildCurves3d(ts2);
+			auto ais2 = new AIS_Shape(profile_wire);
+			myAISContext()->Display(ais2, false);
+
+			ManagedObjHandle^ hhh2 = gcnew ManagedObjHandle();
+
+			auto hn2 = GetHandle(*ais2);
+			hhh2->FromObjHandle(hn2);
+			return hhh2;//	myContext->Display(new AIS_Shape(ts)
+		}
+
+		IManagedObjHandle^ MakeFillet2d(IManagedObjHandle^ h1, double s)
+		{
+			auto hh = ObjHandle(h1);
+			const auto object1 = impl->findObject(hh);
+			std::vector<ObjHandle> vertices;
+			impl->GetSelectedVertices(vertices);
+			//auto edge = impl->getSelectedEdge(myAISContext().get());
+
+			//const auto* object2 = impl->getObject(edge);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			shape0 = shape0.Located(object1->LocalTransformation());
+
+			BRepFilletAPI_MakeFillet2d filletOp;
+			for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next())
+			{
+				const auto ttt = exp.Current();
+				auto loc = ttt.Location();
+
+				const auto& baseWire = TopoDS::Wire(ttt);
+				bool isPlannar = true;
+				TopoDS_Face baseFace = BRepBuilderAPI_MakeFace(baseWire, isPlannar);
+				filletOp.Init(baseFace);
+			}
+
+
+
+			bool b = false;
+			for (TopExp_Explorer edgeExplorer(shape0, TopAbs_VERTEX); edgeExplorer.More(); edgeExplorer.Next()) {
+				const auto ttt = edgeExplorer.Current();
+				const auto& _vertex = TopoDS::Vertex(ttt);
+				auto tt = ttt.TShape();
+
+				if (_vertex.IsNull()) {
+					continue;
+				}
+
+				for (int i = 0; i < vertices.size(); i++)
 				{
-					filletOp.AddFillet(_vertex, s);
-					b = true;
-					vertices.erase(vertices.begin() + i);
-					break;
+					auto& vertex = vertices[i];
+					//todo fix
+					//if (ttt3 == vertex.handleT) 
+					{
+						filletOp.AddFillet(_vertex, s);
+						b = true;
+						vertices.erase(vertices.begin() + i);
+						break;
+					}
 				}
 			}
+
+			if (!b)
+				return nullptr;
+
+			filletOp.Build();
+
+
+			//Extract new face bound wire
+			TopExp_Explorer explorer(filletOp.Shape(), TopAbs_WIRE);
+			//Normally ony one wire exists
+			TopoDS_Wire filletWire = TopoDS::Wire(explorer.Current());
+			auto ais = new AIS_Shape(filletWire);
+			myAISContext()->Display(ais, false);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
 		}
 
-		if (!b)
-			return nullptr;
-
-		filletOp.Build();
-
-
-		//Extract new face bound wire
-		TopExp_Explorer explorer(filletOp.Shape(), TopAbs_WIRE);
-		//Normally ony one wire exists
-		TopoDS_Wire filletWire = TopoDS::Wire(explorer.Current());
-		auto ais = new AIS_Shape(filletWire);
-		myAISContext()->Display(ais, false);
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ MakeFillet2d_new(ManagedObjHandle^ h1, double s)
-	{
-		//not tested
-		auto hh = h1->ToObjHandle();
-		const auto object1 = impl->findObject(hh);
-		std::vector<ObjHandle> vertices;
-		impl->GetSelectedVertices(vertices);
-		//auto edge = impl->getSelectedEdge(myAISContext().get());
-
-		//const auto* object2 = impl->getObject(edge);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-		shape0 = shape0.Located(object1->LocalTransformation());
-
-		BRepFilletAPI_MakeFillet2d filletOp;
-		for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next())
+		ManagedObjHandle^ MakeFillet2d_new(ManagedObjHandle^ h1, double s)
 		{
-			const auto ttt = exp.Current();
-			auto loc = ttt.Location();
-			const auto& _wire = TopoDS::Wire(ttt);
+			//not tested
+			auto hh = h1->ToObjHandle();
+			const auto object1 = impl->findObject(hh);
+			std::vector<ObjHandle> vertices;
+			impl->GetSelectedVertices(vertices);
+			//auto edge = impl->getSelectedEdge(myAISContext().get());
 
-			if (_wire.IsNull())
-				continue;
+			//const auto* object2 = impl->getObject(edge);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			shape0 = shape0.Located(object1->LocalTransformation());
 
-			std::vector<  std::reference_wrapper<const TopoDS_Edge>> edges;
+			BRepFilletAPI_MakeFillet2d filletOp;
+			for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next())
+			{
+				const auto ttt = exp.Current();
+				auto loc = ttt.Location();
+				const auto& _wire = TopoDS::Wire(ttt);
 
-			for (TopExp_Explorer edgeExplorer(_wire, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
-				const auto ttt = edgeExplorer.Current();
-				auto& _edge = TopoDS::Edge(ttt);
-
-				if (_edge.IsNull())
+				if (_wire.IsNull())
 					continue;
 
-				for (TopExp_Explorer edgeExplorer(_edge, TopAbs_VERTEX); edgeExplorer.More(); edgeExplorer.Next()) {
+				std::vector<  std::reference_wrapper<const TopoDS_Edge>> edges;
+
+				for (TopExp_Explorer edgeExplorer(_wire, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
 					const auto ttt = edgeExplorer.Current();
-					const auto& _vertex = TopoDS::Vertex(ttt);
+					auto& _edge = TopoDS::Edge(ttt);
 
-
-					if (_vertex.IsNull())
+					if (_edge.IsNull())
 						continue;
 
-					for (int i = 0; i < vertices.size(); i++)
-					{
-						auto& vertex = vertices[i];
-						//todo fix
-						//if (ttt3 == vertex.handleT) 
-						{
-							edges.push_back(std::reference_wrapper<const TopoDS_Edge>(_edge));
+					for (TopExp_Explorer edgeExplorer(_edge, TopAbs_VERTEX); edgeExplorer.More(); edgeExplorer.Next()) {
+						const auto ttt = edgeExplorer.Current();
+						const auto& _vertex = TopoDS::Vertex(ttt);
 
-							break;
+
+						if (_vertex.IsNull())
+							continue;
+
+						for (int i = 0; i < vertices.size(); i++)
+						{
+							auto& vertex = vertices[i];
+							//todo fix
+							//if (ttt3 == vertex.handleT) 
+							{
+								edges.push_back(std::reference_wrapper<const TopoDS_Edge>(_edge));
+
+								break;
+							}
 						}
+						if (edges.size() == 2)
+							break;
 					}
+
 					if (edges.size() == 2)
 						break;
 				}
+				BRepBuilderAPI_MakeWire wire(edges[0], edges[1]);
 
-				if (edges.size() == 2)
-					break;
-			}
-			BRepBuilderAPI_MakeWire wire(edges[0], edges[1]);
+				bool isPlannar = true;
+				TopoDS_Face baseFace = BRepBuilderAPI_MakeFace(wire, isPlannar);
+				filletOp.Init(baseFace);
 
-			bool isPlannar = true;
-			TopoDS_Face baseFace = BRepBuilderAPI_MakeFace(wire, isPlannar);
-			filletOp.Init(baseFace);
-
-		}
-
-
-
-		bool b = false;
-		for (TopExp_Explorer edgeExplorer(shape0, TopAbs_VERTEX); edgeExplorer.More(); edgeExplorer.Next()) {
-			const auto ttt = edgeExplorer.Current();
-			const auto& _vertex = TopoDS::Vertex(ttt);
-
-
-			if (_vertex.IsNull()) {
-				continue;
 			}
 
-			for (int i = 0; i < vertices.size(); i++)
-			{
-				auto& vertex = vertices[i];
-				//todo fix
-			//	if (ttt3 == vertex.handleT) 
-				{
-					filletOp.AddFillet(_vertex, s);
-					b = true;
-					vertices.erase(vertices.begin() + i);
-					break;
+
+
+			bool b = false;
+			for (TopExp_Explorer edgeExplorer(shape0, TopAbs_VERTEX); edgeExplorer.More(); edgeExplorer.Next()) {
+				const auto ttt = edgeExplorer.Current();
+				const auto& _vertex = TopoDS::Vertex(ttt);
+
+
+				if (_vertex.IsNull()) {
+					continue;
 				}
-			}
-		}
 
-		if (!b)
-			return nullptr;
-
-		filletOp.Build();
-
-
-		//Extract new face bound wire
-		TopExp_Explorer explorer(filletOp.Shape(), TopAbs_WIRE);
-		//Normally ony one wire exists
-		TopoDS_Wire filletWire = TopoDS::Wire(explorer.Current());
-		auto ais = new AIS_Shape(filletWire);
-		myAISContext()->Display(ais, false);
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ MakeFillet(ManagedObjHandle^ h1, double s)
-	{
-		auto hh = h1->ToObjHandle();
-		//const auto* object1 = impl->getObject(hh);
-		const auto object1 = impl->findObject(hh);
-		std::vector<ObjHandle> edges;
-		impl->GetSelectedEdges(edges);
-		//auto edge = impl->getSelectedEdge(myAISContext().get());
-
-		//const auto* object2 = impl->getObject(edge);
-		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-
-		BRepFilletAPI_MakeFillet filletOp(shape0);
-
-		bool b = false;
-		for (TopExp_Explorer edgeExplorer(shape0, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
-			const auto _ttt = edgeExplorer.Current();
-			auto ind = GetShapeIndex(_ttt);
-			//auto ttt = _ttt.Located(object1->LocalTransformation());
-
-			const auto& edgee = TopoDS::Edge(_ttt);
-
-			if (edgee.IsNull()) {
-				continue;
-			}
-
-			for (auto edge : edges) {
-				//if (ttt3 == edge.handleT) 
-				if (ind == edge.bindId)
-					// 
+				for (int i = 0; i < vertices.size(); i++)
 				{
-					filletOp.Add(s, edgee);
-					b = true;
-					break;
-				}
-			}
-		}
-
-		if (!b)
-			return nullptr;
-
-		filletOp.Build();
-		auto shape = filletOp.Shape();
-		auto trsf = GetObjectMatrix(h1);
-		shape = BRepBuilderAPI_Transform(shape, trsf, Standard_True);
-
-		auto ais = new AIS_Shape(shape);
-		//myAISContext()->SetLocation(ais, myAISContext()->Location(object1));
-
-		myAISContext()->Display(ais, false);
-		ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
-
-		auto hn = GetHandle(*ais);
-		hhh->FromObjHandle(hn);
-		return hhh;
-	}
-
-	ManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l) {
-
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-		//myAISContext()->SetDisplayMode(prs, AIS_Shaded, false);
-
-		gp_Pnt p1(x, y, z);
-		gp_Pnt p2(w, h, l);
-		BRepPrimAPI_MakeBox box(p1, p2);
-		box.Build();
-		auto solid = box.Solid();
-		auto shape = new AIS_Shape(solid);
-
-		myAISContext()->Display(shape, Standard_True);
-		myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
-		auto hn = GetHandle(*shape);
-		hh->FromObjHandle(hn);
-		return hh;
-	}
-
-	ManagedObjHandle^ MakeCylinder(double r, double h) {
-
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-
-		BRepPrimAPI_MakeCylinder cyl(r, h);
-		cyl.Build();
-		auto solid = cyl.Solid();
-		auto shape = new AIS_Shape(solid);
-		myAISContext()->Display(shape, Standard_True);
-		myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
-		auto hn = GetHandle(*shape);
-		hh->FromObjHandle(hn);
-		return hh;
-	}
-
-	ManagedObjHandle^ MakeSphere(double r) {
-
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-
-		BRepPrimAPI_MakeSphere s(r);
-		s.Build();
-		auto solid = s.Solid();
-		auto shape = new AIS_Shape(solid);
-		myAISContext()->Display(shape, Standard_True);
-		myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
-		auto hn = GetHandle(*shape);
-		hh->FromObjHandle(hn);
-		return hh;
-	}
-
-
-	ManagedObjHandle^ MakeCone(double r1, double r2, double h) {
-
-		ManagedObjHandle^ hh = gcnew ManagedObjHandle();
-
-		BRepPrimAPI_MakeCone s(r1, r2, h);
-		s.Build();
-		auto solid = s.Solid();
-		auto shape = new AIS_Shape(solid);
-		myAISContext()->Display(shape, Standard_True);
-		myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
-		auto hn = GetHandle(*shape);
-		hh->FromObjHandle(hn);
-		return hh;
-	}
-
-	static void ImportElement(BRep_Builder& builder, TopoDS_Compound& compound, BlueprintItem^ item) {
-		Line3D^ line = dynamic_cast<Line3D^>	(item);
-
-		if (line != nullptr) {
-			AttachLineToCompound(builder, compound, line->Start->X, line->Start->Y, line->Start->Z, line->End->X, line->End->Y, line->End->Z);
-		}
-	}
-	ManagedObjHandle^ ImportBlueprint(Blueprint^ blueprint) {
-		TopoDS_Compound compound;
-		BRep_Builder builder;
-
-		builder.MakeCompound(compound);
-
-		for (size_t i = 0; i < blueprint->Contours->Count; i++)
-		{
-			BRepBuilderAPI_MakeWire wire;
-			for (size_t j = 0; j < blueprint->Contours[i]->Items->Count; j++)
-			{
-				auto p = blueprint->Contours[i]->Items[j];
-				Line2D^ line = dynamic_cast<Line2D^>(p);
-				BlueprintPolyline^ polyline = dynamic_cast<BlueprintPolyline^>(p);
-				Arc2d^ arc = dynamic_cast<Arc2d^>(p);
-
-				if (polyline != nullptr) {
-					for (size_t p = 1; p < polyline->Points->Count; p++)
+					auto& vertex = vertices[i];
+					//todo fix
+				//	if (ttt3 == vertex.handleT) 
 					{
-						gp_Pnt pnt1(polyline->Points[p - 1]->X, polyline->Points[p - 1]->Y, 0);
-						gp_Pnt pnt2(polyline->Points[p]->X, polyline->Points[p]->Y, 0);
+						filletOp.AddFillet(_vertex, s);
+						b = true;
+						vertices.erase(vertices.begin() + i);
+						break;
+					}
+				}
+			}
+
+			if (!b)
+				return nullptr;
+
+			filletOp.Build();
+
+
+			//Extract new face bound wire
+			TopExp_Explorer explorer(filletOp.Shape(), TopAbs_WIRE);
+			//Normally ony one wire exists
+			TopoDS_Wire filletWire = TopoDS::Wire(explorer.Current());
+			auto ais = new AIS_Shape(filletWire);
+			myAISContext()->Display(ais, false);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		IManagedObjHandle^ MakeFillet(IManagedObjHandle^ h1, double s)
+		{
+			auto hh = ObjHandle(h1);
+			//const auto* object1 = impl->getObject(hh);
+			const auto object1 = impl->findObject(hh);
+			std::vector<ObjHandle> edges;
+			impl->GetSelectedEdges(edges);
+			//auto edge = impl->getSelectedEdge(myAISContext().get());
+
+			//const auto* object2 = impl->getObject(edge);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+
+			BRepFilletAPI_MakeFillet filletOp(shape0);
+
+			bool b = false;
+			for (TopExp_Explorer edgeExplorer(shape0, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
+				const auto _ttt = edgeExplorer.Current();
+				auto ind = GetShapeIndex(_ttt);
+				//auto ttt = _ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Edge(_ttt);
+
+				if (edgee.IsNull()) {
+					continue;
+				}
+
+				for (auto edge : edges) {
+					//if (ttt3 == edge.handleT) 
+					if (ind == edge.bindId)
+						// 
+					{
+						filletOp.Add(s, edgee);
+						b = true;
+						break;
+					}
+				}
+			}
+
+			if (!b)
+				return nullptr;
+
+			filletOp.Build();
+			auto shape = filletOp.Shape();
+			auto trsf = GetObjectMatrix(h1);
+			shape = BRepBuilderAPI_Transform(shape, trsf, Standard_True);
+
+			auto ais = new AIS_Shape(shape);
+			//myAISContext()->SetLocation(ais, myAISContext()->Location(object1));
+
+			myAISContext()->Display(ais, false);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		IManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+			//myAISContext()->SetDisplayMode(prs, AIS_Shaded, false);
+
+			gp_Pnt p1(x, y, z);
+			gp_Pnt p2(w, h, l);
+			BRepPrimAPI_MakeBox box(p1, p2);
+			box.Build();
+			auto solid = box.Solid();
+			auto shape = new AIS_Shape(solid);
+
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
+		}
+
+		IManagedObjHandle^ MakeCylinder(double r, double h) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+
+			BRepPrimAPI_MakeCylinder cyl(r, h);
+			cyl.Build();
+			auto solid = cyl.Solid();
+			auto shape = new AIS_Shape(solid);
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
+		}
+
+		IManagedObjHandle^ MakeSphere(double r) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+
+			BRepPrimAPI_MakeSphere s(r);
+			s.Build();
+			auto solid = s.Solid();
+			auto shape = new AIS_Shape(solid);
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
+		}
+
+
+		IManagedObjHandle^ MakeCone(double r1, double r2, double h) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+
+			BRepPrimAPI_MakeCone s(r1, r2, h);
+			s.Build();
+			auto solid = s.Solid();
+			auto shape = new AIS_Shape(solid);
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
+		}
+
+		static void ImportElement(BRep_Builder& builder, TopoDS_Compound& compound, BlueprintItem^ item) {
+			Line3D^ line = dynamic_cast<Line3D^>	(item);
+
+			if (line != nullptr) {
+				AttachLineToCompound(builder, compound, line->Start->X, line->Start->Y, line->Start->Z, line->End->X, line->End->Y, line->End->Z);
+			}
+		}
+		IManagedObjHandle^ ImportBlueprint(Blueprint^ blueprint) {
+			TopoDS_Compound compound;
+			BRep_Builder builder;
+
+			builder.MakeCompound(compound);
+
+			for (size_t i = 0; i < blueprint->Contours->Count; i++)
+			{
+				BRepBuilderAPI_MakeWire wire;
+				for (size_t j = 0; j < blueprint->Contours[i]->Items->Count; j++)
+				{
+					auto p = blueprint->Contours[i]->Items[j];
+					Line2D^ line = dynamic_cast<Line2D^>(p);
+					BlueprintPolyline^ polyline = dynamic_cast<BlueprintPolyline^>(p);
+					Arc2d^ arc = dynamic_cast<Arc2d^>(p);
+
+					if (polyline != nullptr) {
+						for (size_t p = 1; p < polyline->Points->Count; p++)
+						{
+							gp_Pnt pnt1(polyline->Points[p - 1]->X, polyline->Points[p - 1]->Y, 0);
+							gp_Pnt pnt2(polyline->Points[p]->X, polyline->Points[p]->Y, 0);
+							Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
+							auto edge = BRepBuilderAPI_MakeEdge(seg1);
+							wire.Add(edge);
+						}
+					}
+					else				if (line != nullptr) {
+						gp_Pnt pnt1(line->Start->X, line->Start->Y, 0);
+						gp_Pnt pnt2(line->End->X, line->End->Y, 0);
 						Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
 						auto edge = BRepBuilderAPI_MakeEdge(seg1);
 						wire.Add(edge);
 					}
-				}
-				else				if (line != nullptr) {
-					gp_Pnt pnt1(line->Start->X, line->Start->Y, 0);
-					gp_Pnt pnt2(line->End->X, line->End->Y, 0);
-					Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
-					auto edge = BRepBuilderAPI_MakeEdge(seg1);
-					wire.Add(edge);
-				}
-				else
-					if (arc != nullptr && arc->IsCircle) {
-						gp_Pnt cen(arc->Center->X, arc->Center->Y, 0);
-
-						auto seg1 = GC_MakeCircle(gp_Ax1(cen, gp_Dir(0, 0, 1)), arc->Radius).Value();
-						auto edge = BRepBuilderAPI_MakeEdge(seg1);
-						TopoDS_Edge e = TopoDS::Edge(edge);
-						if (arc->CCW)
-							e.Reverse();
-
-						wire.Add(e);
-						/*auto wb = BRepBuilderAPI_MakeWire(edge).Wire();
-						wb.Reverse();
-
-						wire.Add(wb);*/
-
-					}
 					else
-						if (arc != nullptr) {
+						if (arc != nullptr && arc->IsCircle) {
+							gp_Pnt cen(arc->Center->X, arc->Center->Y, 0);
 
-							gp_Pnt pnt1(arc->Start->X, arc->Start->Y, 0);
-							gp_Pnt pnt2(arc->End->X, arc->End->Y, 0);
-							gp_Pnt pnt3(arc->Middle->X, arc->Middle->Y, 0);
-
-							auto seg1 = GC_MakeArcOfCircle(pnt1, pnt3, pnt2).Value();
+							auto seg1 = GC_MakeCircle(gp_Ax1(cen, gp_Dir(0, 0, 1)), arc->Radius).Value();
 							auto edge = BRepBuilderAPI_MakeEdge(seg1);
+							TopoDS_Edge e = TopoDS::Edge(edge);
+							if (arc->CCW)
+								e.Reverse();
 
-							wire.Add(edge);
+							wire.Add(e);
+							/*auto wb = BRepBuilderAPI_MakeWire(edge).Wire();
+							wb.Reverse();
+
+							wire.Add(wb);*/
+
 						}
+						else
+							if (arc != nullptr) {
+
+								gp_Pnt pnt1(arc->Start->X, arc->Start->Y, 0);
+								gp_Pnt pnt2(arc->End->X, arc->End->Y, 0);
+								gp_Pnt pnt3(arc->Middle->X, arc->Middle->Y, 0);
+
+								auto seg1 = GC_MakeArcOfCircle(pnt1, pnt3, pnt2).Value();
+								auto edge = BRepBuilderAPI_MakeEdge(seg1);
+
+								wire.Add(edge);
+							}
+				}
+
+				builder.Add(compound, wire.Wire());
+
+				//ImportElement(builder, compound, blueprint->Items[i]);
 			}
 
-			builder.Add(compound, wire.Wire());
+			auto shape = new AIS_Shape(compound);
+			auto h = GetHandle(*shape);
+			myAISContext()->Display(shape, true);
 
-			//ImportElement(builder, compound, blueprint->Items[i]);
+			ManagedObjHandle^ ret = gcnew ManagedObjHandle();
+			ret->FromObjHandle(h);
+			return ret;
 		}
 
-		auto shape = new AIS_Shape(compound);
-		auto h = GetHandle(*shape);
-		myAISContext()->Display(shape, true);
+		IManagedObjHandle^ ImportBlueprint(Blueprint3d^ blueprint) {
+			TopoDS_Compound compound;
+			BRep_Builder builder;
 
-		ManagedObjHandle^ ret = gcnew ManagedObjHandle();
-		ret->FromObjHandle(h);
-		return ret;
-	}
+			builder.MakeCompound(compound);
 
-	ManagedObjHandle^ ImportBlueprint(Blueprint3d^ blueprint) {
-		TopoDS_Compound compound;
-		BRep_Builder builder;
-
-		builder.MakeCompound(compound);
-
-		for (size_t i = 0; i < blueprint->Contours->Count; i++)
-		{
-			BRepBuilderAPI_MakeWire wire;
-			for (size_t j = 0; j < blueprint->Contours[i]->Items->Count; j++)
+			for (size_t i = 0; i < blueprint->Contours->Count; i++)
 			{
-				auto p = blueprint->Contours[i]->Items[j];
-				Line3D^ line = dynamic_cast<Line3D^>(p);
-				Arc3d^ arc = dynamic_cast<Arc3d^>(p);
+				BRepBuilderAPI_MakeWire wire;
+				for (size_t j = 0; j < blueprint->Contours[i]->Items->Count; j++)
+				{
+					auto p = blueprint->Contours[i]->Items[j];
+					Line3D^ line = dynamic_cast<Line3D^>(p);
+					Arc3d^ arc = dynamic_cast<Arc3d^>(p);
 
-				if (line != nullptr) {
-					gp_Pnt pnt1(line->Start->X, line->Start->Y, line->Start->Z);
-					gp_Pnt pnt2(line->End->X, line->End->Y, line->End->Z);
-					Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
-					auto edge = BRepBuilderAPI_MakeEdge(seg1);
-					wire.Add(edge);
-				}
-				else
-					if (arc != nullptr && arc->AngleSweep == 360) {
-						gp_Pnt cen(arc->Center->X, arc->Center->Y, arc->Center->Z);
-
-						auto seg1 = GC_MakeCircle(gp_Ax1(cen, gp_Dir(0, 0, 1)), arc->Radius).Value();
+					if (line != nullptr) {
+						gp_Pnt pnt1(line->Start->X, line->Start->Y, line->Start->Z);
+						gp_Pnt pnt2(line->End->X, line->End->Y, line->End->Z);
+						Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
 						auto edge = BRepBuilderAPI_MakeEdge(seg1);
 						wire.Add(edge);
 					}
+					else
+						if (arc != nullptr && arc->AngleSweep == 360) {
+							gp_Pnt cen(arc->Center->X, arc->Center->Y, arc->Center->Z);
+
+							auto seg1 = GC_MakeCircle(gp_Ax1(cen, gp_Dir(0, 0, 1)), arc->Radius).Value();
+							auto edge = BRepBuilderAPI_MakeEdge(seg1);
+							wire.Add(edge);
+						}
+				}
+
+				builder.Add(compound, wire.Wire());
+
+				//ImportElement(builder, compound, blueprint->Items[i]);
 			}
 
-			builder.Add(compound, wire.Wire());
+			auto shape = new AIS_Shape(compound);
+			auto h = GetHandle(*shape);
+			myAISContext()->Display(shape, true);
 
-			//ImportElement(builder, compound, blueprint->Items[i]);
+			ManagedObjHandle^ ret = gcnew ManagedObjHandle();
+			ret->FromObjHandle(h);
+			return ret;
 		}
 
-		auto shape = new AIS_Shape(compound);
-		auto h = GetHandle(*shape);
-		myAISContext()->Display(shape, true);
-
-		ManagedObjHandle^ ret = gcnew ManagedObjHandle();
-		ret->FromObjHandle(h);
-		return ret;
-	}
-
-	static void AttachLineToCompound(BRep_Builder& builder, TopoDS_Compound& compound, double x1, double y1, double z1, double x2, double y2, double z2)
-	{
-		Handle(Geom_TrimmedCurve) segment = GC_MakeSegment(gp_Pnt(x1, y1, z1), gp_Pnt(x2, y2, z2));
-		TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(segment);
-
-		TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
-
-		BRepBuilderAPI_MakeWire topWire;
-		topWire.Add(wire);
-		auto result = topWire.Wire();
-		builder.Add(compound, topWire);
-	}
-
-	int GetShapeIndex(const TopoDS_Shape& shape) {
-
-		if (impl->_map_shape_int.Contains(shape)) {
-			return impl->_map_shape_int.FindIndex(shape);
-		}
-		return -1;
-	}
-
-	int AddOrGetShapeIndex(const TopoDS_Shape& shape) {
-
-		if (impl->_map_shape_int.Contains(shape)) {
-			return impl->_map_shape_int.FindIndex(shape);
-		}
-		return impl->_map_shape_int.Add(shape);
-	}
-
-	ObjHandle GetHandle(const AIS_Shape& ais_shape) {
-		const TopoDS_Shape& shape = ais_shape.Shape();
-		ObjHandle h;
-		if (impl->_map_shape_int.Contains(shape)) {
-			h.bindId = impl->_map_shape_int.FindIndex(shape);
-		}
-		else {
-			h.bindId = impl->_map_shape_int.Add(shape);
-		}
-
-
-		return h;
-	}
-
-	/*/// <summary>
-	///Define which Import/Export function must be called
-	/// </summary>
-	/// <param name="theFileName">Name of Import/Export file</param>
-	/// <param name="theFormat">Determines format of Import/Export file</param>
-	/// <param name="theIsImport">Determines is Import or not</param>
-	bool TranslateModel(System::String^ theFileName, int theFormat, bool theIsImport)
-	{
-		bool isResult;
-
-		const TCollection_AsciiString aFilename = toAsciiString(theFileName);
-		if (theIsImport)
+		static void AttachLineToCompound(BRep_Builder& builder, TopoDS_Compound& compound, double x1, double y1, double z1, double x2, double y2, double z2)
 		{
-			switch (theFormat)
-			{
-			case 0:
-				isResult = ImportBrep(aFilename);
-				break;
-			case 1:
-				isResult = ImportStep(aFilename);
-				break;
-			case 2:
-				isResult = ImportIges(aFilename);
-				break;
-			default:
-				isResult = false;
-			}
+			Handle(Geom_TrimmedCurve) segment = GC_MakeSegment(gp_Pnt(x1, y1, z1), gp_Pnt(x2, y2, z2));
+			TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(segment);
+
+			TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
+
+			BRepBuilderAPI_MakeWire topWire;
+			topWire.Add(wire);
+			auto result = topWire.Wire();
+			builder.Add(compound, topWire);
 		}
-		else
+
+		int GetShapeIndex(const TopoDS_Shape& shape) {
+
+			if (impl->_map_shape_int.Contains(shape)) {
+				return impl->_map_shape_int.FindIndex(shape);
+			}
+			return -1;
+		}
+
+		int AddOrGetShapeIndex(const TopoDS_Shape& shape) {
+
+			if (impl->_map_shape_int.Contains(shape)) {
+				return impl->_map_shape_int.FindIndex(shape);
+			}
+			return impl->_map_shape_int.Add(shape);
+		}
+
+		ObjHandle GetHandle(const AIS_Shape& ais_shape) {
+			const TopoDS_Shape& shape = ais_shape.Shape();
+			ObjHandle h;
+			if (impl->_map_shape_int.Contains(shape)) {
+				h.bindId = impl->_map_shape_int.FindIndex(shape);
+			}
+			else {
+				h.bindId = impl->_map_shape_int.Add(shape);
+			}
+
+
+			return h;
+		}
+
+		/*/// <summary>
+		///Define which Import/Export function must be called
+		/// </summary>
+		/// <param name="theFileName">Name of Import/Export file</param>
+		/// <param name="theFormat">Determines format of Import/Export file</param>
+		/// <param name="theIsImport">Determines is Import or not</param>
+		bool TranslateModel(System::String^ theFileName, int theFormat, bool theIsImport)
 		{
-			switch (theFormat)
+			bool isResult;
+
+			const TCollection_AsciiString aFilename = toAsciiString(theFileName);
+			if (theIsImport)
 			{
-			case 0:
-				isResult = ExportBRep(aFilename);
-				break;
-			case 1:
-				isResult = ExportStep(aFilename);
-				break;
-			case 2:
-				isResult = ExportIges(aFilename);
-				break;
-			case 3:
-				isResult = ExportVrml(aFilename);
-				break;
-			case 4:
-				isResult = ExportStl(aFilename);
-				break;
-			case 5:
-				isResult = Dump(aFilename);
-				break;
-			default:
-				isResult = false;
+				switch (theFormat)
+				{
+				case 0:
+					isResult = ImportBrep(aFilename);
+					break;
+				case 1:
+					isResult = ImportStep(aFilename);
+					break;
+				case 2:
+					isResult = ImportIges(aFilename);
+					break;
+				default:
+					isResult = false;
+				}
 			}
+			else
+			{
+				switch (theFormat)
+				{
+				case 0:
+					isResult = ExportBRep(aFilename);
+					break;
+				case 1:
+					isResult = ExportStep(aFilename);
+					break;
+				case 2:
+					isResult = ExportIges(aFilename);
+					break;
+				case 3:
+					isResult = ExportVrml(aFilename);
+					break;
+				case 4:
+					isResult = ExportStl(aFilename);
+					break;
+				case 5:
+					isResult = Dump(aFilename);
+					break;
+				default:
+					isResult = false;
+				}
+			}
+			return isResult;
+		}*/
+
+		/// <summary>
+		///Initialize OCCTProxy
+		/// </summary>
+		void InitOCCTProxy(void)
+		{
+			myGraphicDriver() = NULL;
+			myViewer() = NULL;
+			myView() = NULL;
+			myAISContext() = NULL;
 		}
-		return isResult;
-	}*/
 
-	/// <summary>
-	///Initialize OCCTProxy
-	/// </summary>
-	void InitOCCTProxy(void)
-	{
-		myGraphicDriver() = NULL;
-		myViewer() = NULL;
-		myView() = NULL;
-		myAISContext() = NULL;
-	}
-
-private:
-	// fields
-	bool AutoViewerUpdate;
-	NCollection_Haft<Handle(V3d_Viewer)> myViewer;
-	NCollection_Haft<Handle(V3d_View)> myView;
-	NCollection_Haft<Handle(AIS_InteractiveContext)> myAISContext;
-	NCollection_Haft<Handle(OpenGl_GraphicDriver)> myGraphicDriver;
-};
+	private:
+		// fields
+		bool AutoViewerUpdate;
+		NCollection_Haft<Handle(V3d_Viewer)> myViewer;
+		NCollection_Haft<Handle(V3d_View)> myView;
+		NCollection_Haft<Handle(AIS_InteractiveContext)> myAISContext;
+		NCollection_Haft<Handle(OpenGl_GraphicDriver)> myGraphicDriver;
+	};
 
 };

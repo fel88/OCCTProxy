@@ -15,5 +15,4 @@ namespace OCCTProxy.Common
         public double Y { get; set; }
 
     }
-
 }

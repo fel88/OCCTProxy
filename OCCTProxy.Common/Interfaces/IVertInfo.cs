@@ -2,12 +2,10 @@
 
 namespace OCCTProxy.Common.Interfaces
 {
-    public interface ISurfInfo
+    public interface IVertInfo
     {
-        Vector3d COM { get; }
         Vector3d Position { get; }
-        int BindId { get; }
+        int BindId { get; }        
         int AisShapeBindId { get; }
-
     }
 }

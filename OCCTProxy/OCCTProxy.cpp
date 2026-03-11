@@ -4351,9 +4351,12 @@ namespace OCCTProxy {
 					ret->Length = len;
 					ret->CurveType = (CurveType)curveType;
 
-					ret->COM.X = gPt.X();
-					ret->COM.Y = gPt.Y();
-					ret->COM.Z = gPt.Z();
+					Vector3d com;
+					
+					com.X = gPt.X();
+					com.Y = gPt.Y();
+					com.Z = gPt.Z();
+					ret->COM = com;
 
 					ret->Start.X = pnt1.X();
 					ret->Start.Y = pnt1.Y();
@@ -4510,6 +4513,7 @@ namespace OCCTProxy {
 
 			Vector3d pos;
 			Vector3d nrm;
+			Vector3d com;
 
 			PlaneSurfInfo^ ret = gcnew PlaneSurfInfo();
 			GProp_GProps massProps;
@@ -4529,9 +4533,10 @@ namespace OCCTProxy {
 			nrm.Y = dir.Y();
 			nrm.Z = dir.Z();
 
-			ret->COM.X = gPt.X();
-			ret->COM.Y = gPt.Y();
-			ret->COM.Z = gPt.Z();
+			com.X = gPt.X();
+			com.Y = gPt.Y();
+			com.Z = gPt.Z();
+			ret->COM = com;
 			ret->Position = pos;
 			ret->Normal = nrm;
 

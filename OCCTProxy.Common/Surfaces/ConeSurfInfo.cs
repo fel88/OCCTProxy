@@ -1,4 +1,5 @@
 ﻿using OCCTProxy.Common.Interfaces;
+using OpenTK.Mathematics;
 
 namespace OCCTProxy.Common.Surfaces
 {
@@ -7,5 +8,6 @@ namespace OCCTProxy.Common.Surfaces
         public double Radius1 { get; set; }
         public double Radius2 { get; set; }
         public double SemiAngle { get; set; }
+        public Vector3d Axis { get; set; }
     }
 }

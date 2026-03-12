@@ -8,6 +8,8 @@ namespace OCCTProxy.Common.Interfaces
         Vector3d Position { get; }
         int BindId { get; }
         int AisShapeBindId { get; }
+        int Type { get; set; }
+
 
     }
 }

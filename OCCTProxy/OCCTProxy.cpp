@@ -227,7 +227,7 @@ public:
 
 	virtual property int BindId;
 	virtual property int ShapeType;
-	virtual property int AisShapeBindId;//parent
+	virtual property int AisShapeBindId;//parent	
 
 	void FromObjHandle(ObjHandle h) {
 
@@ -4352,7 +4352,7 @@ namespace OCCTProxy {
 					ret->CurveType = (CurveType)curveType;
 
 					Vector3d com;
-					
+
 					com.X = gPt.X();
 					com.Y = gPt.Y();
 					com.Z = gPt.Z();
@@ -4369,6 +4369,82 @@ namespace OCCTProxy {
 				}
 			}
 			return nullptr;
+		}
+
+		SurfInfo^ ExtractUnknownSurface(TopoDS_Shape ttt) {
+			SurfInfo^ ret = gcnew SurfInfo();
+			return ret;
+		}
+
+		ConeSurfInfo^ ExtractConeSurface(TopoDS_Shape ttt) {
+			auto loc = ttt.Location();
+
+			const auto& aFace = TopoDS::Face(ttt);
+			auto orient = aFace.Orientation();
+
+			TopLoc_Location aLocation;
+			Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
+
+			auto bsurf = Handle(Geom_BoundedSurface)::DownCast(aSurf);
+			auto swept = Handle(Geom_SweptSurface)::DownCast(aSurf);
+			auto cyl = Handle(Geom_ConicalSurface)::DownCast(aSurf);
+			auto rev = Handle(Geom_SurfaceOfRevolution)::DownCast(aSurf);
+			auto rtrimmed = Handle(Geom_RectangularTrimmedSurface)::DownCast(aSurf);
+			if (rtrimmed) {
+				auto basis = (*rtrimmed).BasisSurface();
+				auto cyl1 = Handle(Geom_ConicalSurface)::DownCast(basis);
+				if (cyl1) {
+					cyl = cyl1;
+				}
+			}
+
+			double rad = 0;
+			if (cyl) {
+				rad = (*cyl).RefRadius();
+			}
+			else if (rev) {
+				rad = (*cyl).RefRadius();
+			}
+			else if (swept) {
+				rad = (*cyl).RefRadius();
+			}
+			else if (bsurf) {
+				rad = (*cyl).RefRadius();
+			}
+
+
+			auto dir = cyl->Axis().Direction().Transformed(aLocation.Transformation());
+			if (orient == TopAbs_REVERSED) {
+				dir.Reverse();
+			}
+			float aU = 0;
+			float aV = 0;
+
+			gp_Pnt aPnt = aSurf->Value(aU, aV).Transformed(aLocation.Transformation());
+			Vector3d pos;
+			Vector3d nrm;
+
+			ConeSurfInfo^ ret = gcnew ConeSurfInfo();
+
+			GProp_GProps massProps;
+			BRepGProp::SurfaceProperties(ttt, massProps);
+			gp_Pnt gPt = massProps.CentreOfMass();
+
+			nrm.X = dir.X();
+			nrm.Y = dir.Y();
+			nrm.Z = dir.Z();
+
+			pos.X = aPnt.X();
+			pos.Y = aPnt.Y();
+			pos.Z = aPnt.Z();
+
+			ret->COM.X = gPt.X();
+			ret->COM.Y = gPt.Y();
+			ret->COM.Z = gPt.Z();
+			ret->Position = pos;
+			ret->Radius1 = rad;
+			ret->Axis = nrm;
+			return ret;
 		}
 
 		CylinderSurfInfo^ ExtractCylinderSurface(TopoDS_Shape ttt) {
@@ -4608,18 +4684,21 @@ namespace OCCTProxy {
 				Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
 
 				GeomAdaptor_Surface theGASurface(aSurf);
+				
 
 				if (aFace.IsNull())
 					continue;
 
 				if (ind == hh.bindId) {
-					switch (theGASurface.GetType())
+					auto type = theGASurface.GetType();
+					switch (type)
 					{
 					case GeomAbs_Plane:
 					{
 						auto ret = ExtractPlaneSurface(ttt);
 						ret->BindId = ind;
 						ret->AisShapeBindId = parentId;
+						ret->Type = type;
 						return ret;
 					}
 					case GeomAbs_Cylinder:
@@ -4627,6 +4706,7 @@ namespace OCCTProxy {
 						auto ret = ExtractCylinderSurface(ttt);
 						ret->BindId = ind;
 						ret->AisShapeBindId = parentId;
+						ret->Type = type;
 
 						return ret;
 					}
@@ -4635,6 +4715,24 @@ namespace OCCTProxy {
 						auto ret = ExtractSphereSurface(ttt);
 						ret->BindId = ind;
 						ret->AisShapeBindId = parentId;
+						ret->Type = type;
+
+						return ret;
+					}case GeomAbs_Cone:
+					{
+						auto ret = ExtractConeSurface(ttt);
+						ret->BindId = ind;
+						ret->AisShapeBindId = parentId;
+						ret->Type = type;
+
+						return ret;
+					}
+					default:
+					{
+						auto ret = ExtractUnknownSurface(ttt);
+						ret->BindId = ind;
+						ret->AisShapeBindId = parentId;
+						ret->Type = type;
 
 						return ret;
 					}
@@ -4707,13 +4805,17 @@ namespace OCCTProxy {
 				if (aFace.IsNull())
 					continue;
 
-
-				auto tp = theGASurface.GetType();
 				SurfInfo^ toAdd = nullptr;
-				switch (theGASurface.GetType()) {
+				auto type = theGASurface.GetType();
+				switch (type) {
 				case GeomAbs_Plane:
 				{
 					toAdd = ExtractPlaneSurface(ttt);
+				}
+				break;
+				case GeomAbs_Cone:
+				{
+					toAdd = ExtractConeSurface(ttt);
 				}
 				break;
 				case GeomAbs_Cylinder:
@@ -4726,8 +4828,11 @@ namespace OCCTProxy {
 					toAdd = ExtractSphereSurface(ttt);
 				}
 				break;
+				default:
+					toAdd = ExtractUnknownSurface(ttt);
 				}
 				if (toAdd != nullptr) {
+					toAdd->Type = type;
 					toAdd->BindId = ind;
 					toAdd->AisShapeBindId = indp;
 					rett->Add(toAdd);

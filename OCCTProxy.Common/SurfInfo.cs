@@ -10,5 +10,6 @@ namespace OCCTProxy.Common
         public Vector3d Position { get; set; }
         public int BindId { get; set; }
         public int AisShapeBindId { get; set; }//parent
+        public int Type { get; set; }
     }
 }

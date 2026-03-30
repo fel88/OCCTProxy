@@ -104,6 +104,7 @@ namespace OCCTProxy.Common.Interfaces
         IManagedObjHandle MirrorObject(IManagedObjHandle handle, Vector3d dir, Vector3d pnt, bool axis2, bool rel);
         IManagedObjHandle MakeSphere(double r);
         IManagedObjHandle MakeCylinder(double r, double h);
+        IManagedObjHandle MakeTorus(double r1, double r2);
         bool ExportStep(ITopObjHandle handle, string fileName);
         List<byte> ExportStepStream(ITopObjHandle handle);
         void MoveTo(int x, int y);

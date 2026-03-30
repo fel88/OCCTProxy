@@ -70,6 +70,7 @@
 #include <BRepBuilderAPI_Copy.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakeSphere.hxx>
+#include <BRepPrimAPI_MakeTorus.hxx>
 #include <BRepPrimAPI_MakeCone.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <GC_MakeSegment.hxx>
@@ -5405,6 +5406,21 @@ namespace OCCTProxy {
 			BRepPrimAPI_MakeCylinder cyl(r, h);
 			cyl.Build();
 			auto solid = cyl.Solid();
+			auto shape = new AIS_Shape(solid);
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
+		}	
+		
+		virtual IManagedObjHandle^ MakeTorus(double r1, double r2) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+
+			BRepPrimAPI_MakeTorus tor(r1, r2);
+			tor.Build();
+			auto solid = tor.Solid();
 			auto shape = new AIS_Shape(solid);
 			myAISContext()->Display(shape, Standard_True);
 			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);

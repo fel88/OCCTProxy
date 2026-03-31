@@ -3457,13 +3457,13 @@ namespace OCCTProxy {
 			return ExportStep(aFilename);
 		}
 
-		virtual bool ExportStep(ITopObjHandle^ h, System::String^ str)
+		virtual bool ExportStep(ITopObjHandle^ h, System::String^ str, bool located)
 		{
 			const TCollection_AsciiString aFilename = toAsciiString(str);
-			return ExportStep(h, aFilename);
+			return ExportStep(h, aFilename, located);
 		}
 
-		bool ExportStep(ITopObjHandle^ h, const TCollection_AsciiString& theFileName)
+		bool ExportStep(ITopObjHandle^ h, const TCollection_AsciiString& theFileName, bool located)
 		{
 			STEPControl_StepModelType aType = STEPControl_AsIs;
 			IFSelect_ReturnStatus aStatus;
@@ -3475,18 +3475,16 @@ namespace OCCTProxy {
 			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
 			TopoDS_Shape aShape = anIS->Shape();
 
-			aShape = aShape.Located(anIS->LocalTransformation());
+			if (located)
+				aShape = aShape.Located(anIS->LocalTransformation());
+
 			aStatus = aWriter.Transfer(aShape, aType);
-			if (aStatus != IFSelect_RetDone)
-			{
-				return false;
-			}
+			if (aStatus != IFSelect_RetDone)			
+				return false;			
 
 			aStatus = aWriter.Write(theFileName.ToCString());
-			if (aStatus != IFSelect_RetDone)
-			{
-				return false;
-			}
+			if (aStatus != IFSelect_RetDone)			
+				return false;			
 
 			return true;
 		}
@@ -3495,7 +3493,7 @@ namespace OCCTProxy {
 		///Export Step file
 		/// </summary>
 		/// <param name="theFileName">Name of export file</param>
-		virtual virtual List<System::Byte>^ ExportStepStream(ITopObjHandle^ h)
+		virtual virtual List<System::Byte>^ ExportStepStream(ITopObjHandle^ h, bool located)
 		{
 			STEPControl_StepModelType aType = STEPControl_AsIs;
 			IFSelect_ReturnStatus aStatus;
@@ -3507,6 +3505,10 @@ namespace OCCTProxy {
 
 			Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast(anIO);
 			TopoDS_Shape aShape = anIS->Shape();
+
+			if (located)
+				aShape = aShape.Located(anIS->LocalTransformation());
+
 			aStatus = aWriter.Transfer(aShape, aType);
 
 			if (aStatus != IFSelect_RetDone)
@@ -4685,7 +4687,7 @@ namespace OCCTProxy {
 				Handle(Geom_Surface) aSurf = BRep_Tool::Surface(aFace, aLocation);
 
 				GeomAdaptor_Surface theGASurface(aSurf);
-				
+
 
 				if (aFace.IsNull())
 					continue;
@@ -5412,8 +5414,8 @@ namespace OCCTProxy {
 			auto hn = GetHandle(*shape);
 			hh->FromObjHandle(hn);
 			return hh;
-		}	
-		
+		}
+
 		virtual IManagedObjHandle^ MakeTorus(double r1, double r2) {
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();

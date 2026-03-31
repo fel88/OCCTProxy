@@ -105,8 +105,8 @@ namespace OCCTProxy.Common.Interfaces
         IManagedObjHandle MakeSphere(double r);
         IManagedObjHandle MakeCylinder(double r, double h);
         IManagedObjHandle MakeTorus(double r1, double r2);
-        bool ExportStep(ITopObjHandle handle, string fileName);
-        List<byte> ExportStepStream(ITopObjHandle handle);
+        bool ExportStep(ITopObjHandle handle, string fileName, bool located = true);
+        List<byte> ExportStepStream(ITopObjHandle handle, bool located = true);
         void MoveTo(int x, int y);
         void Pan(int x, int y);
         void Rotation(int x, int y);

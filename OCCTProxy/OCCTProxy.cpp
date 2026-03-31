@@ -5487,23 +5487,23 @@ namespace OCCTProxy {
 					if (polyline != nullptr) {
 						for (size_t p = 1; p < polyline->Points->Count; p++)
 						{
-							gp_Pnt pnt1(polyline->Points[p - 1]->X, polyline->Points[p - 1]->Y, 0);
-							gp_Pnt pnt2(polyline->Points[p]->X, polyline->Points[p]->Y, 0);
+							gp_Pnt pnt1(polyline->Points[p - 1].X, polyline->Points[p - 1].Y, 0);
+							gp_Pnt pnt2(polyline->Points[p].X, polyline->Points[p].Y, 0);
 							Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
 							auto edge = BRepBuilderAPI_MakeEdge(seg1);
 							wire.Add(edge);
 						}
 					}
 					else				if (line != nullptr) {
-						gp_Pnt pnt1(line->Start->X, line->Start->Y, 0);
-						gp_Pnt pnt2(line->End->X, line->End->Y, 0);
+						gp_Pnt pnt1(line->Start.X, line->Start.Y, 0);
+						gp_Pnt pnt2(line->End.X, line->End.Y, 0);
 						Handle(Geom_TrimmedCurve) seg1 = GC_MakeSegment(pnt1, pnt2);
 						auto edge = BRepBuilderAPI_MakeEdge(seg1);
 						wire.Add(edge);
 					}
 					else
 						if (arc != nullptr && arc->IsCircle) {
-							gp_Pnt cen(arc->Center->X, arc->Center->Y, 0);
+							gp_Pnt cen(arc->Center.X, arc->Center.Y, 0);
 
 							auto seg1 = GC_MakeCircle(gp_Ax1(cen, gp_Dir(0, 0, 1)), arc->Radius).Value();
 							auto edge = BRepBuilderAPI_MakeEdge(seg1);
@@ -5521,9 +5521,9 @@ namespace OCCTProxy {
 						else
 							if (arc != nullptr) {
 
-								gp_Pnt pnt1(arc->Start->X, arc->Start->Y, 0);
-								gp_Pnt pnt2(arc->End->X, arc->End->Y, 0);
-								gp_Pnt pnt3(arc->Middle->X, arc->Middle->Y, 0);
+								gp_Pnt pnt1(arc->Start.X, arc->Start.Y, 0);
+								gp_Pnt pnt2(arc->End.X, arc->End.Y, 0);
+								gp_Pnt pnt3(arc->Middle.X, arc->Middle.Y, 0);
 
 								auto seg1 = GC_MakeArcOfCircle(pnt1, pnt3, pnt2).Value();
 								auto edge = BRepBuilderAPI_MakeEdge(seg1);

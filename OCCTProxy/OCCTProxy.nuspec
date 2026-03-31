@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>OCCTProxy</id>
-    <version>1.0.2</version>
+    <version>1.0.4</version>
     <title>OpenCascade hybrid proxy</title>
     <authors>fel88</authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -11,7 +11,7 @@
     <projectUrl>https://github.com/fel88/OCCTProxy</projectUrl>
     <description>OpenCascade hybrid proxy</description>
     
-    <copyright>Copyrigth 2025</copyright>
+    <copyright>Copyrigth 2026</copyright>
     
   </metadata>
   <files>
@@ -28,8 +28,7 @@
      <file src="..\win64\bin\OCCTProxy.Common.dll" target="lib\net8.0\OCCTProxy.Common.dll" /> 
      <file src="..\win64\bin\OCCTProxy.dll" target="lib\net8.0\OCCTProxy.dll" /> 
      <file src="..\win64\bin\ijwhost.dll" target="lib\net8.0\ijwhost.dll" /> 
-     <file src="..\OCCTProxy.Interfaces\bin\Release\net8.0-windows\OCCTProxy.Interfaces.dll" target="lib\net8.0\OCCTProxy.Interfaces.dll" /> 
-     <file src="..\OCCTProxy.Interfaces\bin\Release\net8.0-windows\OCCTProxy.Interfaces.deps.json" target="lib\net8.0\OCCTProxy.Interfaces.deps.json" /> 
+     
 
     <!-- Include MSBuild props and targets files for automatic integration 
     <file src="build\MyCppCliPackage.props" target="build\MyCppCliPackage.props" />

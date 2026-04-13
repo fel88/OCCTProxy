@@ -3479,12 +3479,12 @@ namespace OCCTProxy {
 				aShape = aShape.Located(anIS->LocalTransformation());
 
 			aStatus = aWriter.Transfer(aShape, aType);
-			if (aStatus != IFSelect_RetDone)			
-				return false;			
+			if (aStatus != IFSelect_RetDone)
+				return false;
 
 			aStatus = aWriter.Write(theFileName.ToCString());
-			if (aStatus != IFSelect_RetDone)			
-				return false;			
+			if (aStatus != IFSelect_RetDone)
+				return false;
 
 			return true;
 		}
@@ -3977,12 +3977,21 @@ namespace OCCTProxy {
 		}
 
 
+		virtual IManagedObjHandle^ Clone(IManagedObjHandle^ h)
+		{
+			return Clone(h->AisShapeBindId);
+		}
 
-		virtual IManagedObjHandle^ Clone(IManagedObjHandle^ m) {
+		virtual IManagedObjHandle^ Clone(ITopObjHandle^ h)
+		{
+			return Clone(h->BindId);
+		}
+
+		virtual IManagedObjHandle^ Clone(int id) 
+		{
 			BRepBuilderAPI_Copy copy;
-			ObjHandle h = ObjHandle(m);
 
-			const auto object1 = impl->findObject(h);
+			const auto object1 = impl->findObject(id);
 
 			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
 			shape0 = shape0.Located(object1->LocalTransformation());
@@ -4911,21 +4920,29 @@ namespace OCCTProxy {
 
 				ret->Length = len;
 				ret->CurveType = (CurveType)curveType;
+				Vector3d com;
 
-				ret->COM.X = gPt.X();
-				ret->COM.Y = gPt.Y();
-				ret->COM.Z = gPt.Z();
+				com.X = gPt.X();
+				com.Y = gPt.Y();
+				com.Z = gPt.Z();
 
-				ret->Start.X = pnt1.X();
-				ret->Start.Y = pnt1.Y();
-				ret->Start.Z = pnt1.Z();
+				ret->COM = com;
 
-				ret->End.X = pnt2.X();
-				ret->End.Y = pnt2.Y();
-				ret->End.Z = pnt2.Z();
+				Vector3d start;
 
+				start.X = pnt1.X();
+				start.Y = pnt1.Y();
+				start.Z = pnt1.Z();
+
+				ret->Start = start;
+
+				Vector3d end;
+				end.X = pnt2.X();
+				end.Y = pnt2.Y();
+				end.Z = pnt2.Z();
+
+				ret->End = end;
 				rett->Add(ret);
-
 			}
 			return rett;
 		}
@@ -5317,6 +5334,66 @@ namespace OCCTProxy {
 			//Normally ony one wire exists
 			TopoDS_Wire filletWire = TopoDS::Wire(explorer.Current());
 			auto ais = new AIS_Shape(filletWire);
+			myAISContext()->Display(ais, false);
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			return hhh;
+		}
+
+		virtual IManagedObjHandle^ MakeFillet(IManagedObjHandle^ h1, array<IEdgeInfo^>^ mEdges, double s)
+		{
+			auto hh = ObjHandle(h1);
+			//const auto* object1 = impl->getObject(hh);
+			const auto object1 = impl->findObject(hh);
+			std::vector<ObjHandle> edges;
+			for each (IEdgeInfo ^ t in mEdges)
+			{
+				edges.push_back(ObjHandle(t));
+			}
+			//auto edge = impl->getSelectedEdge(myAISContext().get());
+
+			//const auto* object2 = impl->getObject(edge);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+
+			BRepFilletAPI_MakeFillet filletOp(shape0);
+
+			bool b = false;
+			for (TopExp_Explorer edgeExplorer(shape0, TopAbs_EDGE); edgeExplorer.More(); edgeExplorer.Next()) {
+				const auto _ttt = edgeExplorer.Current();
+				auto ind = GetShapeIndex(_ttt);
+				//auto ttt = _ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Edge(_ttt);
+
+				if (edgee.IsNull()) {
+					continue;
+				}
+
+				for (auto edge : edges) {
+					//if (ttt3 == edge.handleT) 
+					if (ind == edge.bindId)
+						// 
+					{
+						filletOp.Add(s, edgee);
+						b = true;
+						break;
+					}
+				}
+			}
+
+			if (!b)
+				return nullptr;
+
+			filletOp.Build();
+			auto shape = filletOp.Shape();
+			auto trsf = GetObjectMatrix(h1);
+			shape = BRepBuilderAPI_Transform(shape, trsf, Standard_True);
+
+			auto ais = new AIS_Shape(shape);
+			//myAISContext()->SetLocation(ais, myAISContext()->Location(object1));
+
 			myAISContext()->Display(ais, false);
 			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
 

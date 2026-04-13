@@ -13,5 +13,6 @@ namespace OCCTProxy.Common
         public double Length { get; set; }
         public int BindId { get; set; }
         public int AisShapeBindId { get; set; }
+        public int ShapeType { get; set; }
     }
 }

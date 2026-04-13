@@ -95,7 +95,10 @@ namespace OCCTProxy.Common.Interfaces
         IManagedObjHandle MakeChamfer(IManagedObjHandle so, double r);
         IManagedObjHandle MakePrism(IManagedObjHandle managedObjHandle, double h);
         IManagedObjHandle Clone(IManagedObjHandle so);
+        IManagedObjHandle Clone(ITopObjHandle so);
+        IManagedObjHandle Clone(int id);
         IManagedObjHandle MakeFillet(IManagedObjHandle so, double r);
+        IManagedObjHandle MakeFillet(IManagedObjHandle so, IEdgeInfo[] edges, double r);
         IManagedObjHandle MakeFillet2d(IManagedObjHandle so, double r);
         IManagedObjHandle HelixWire(double radius, double radius2, double pitch, double sweep);
         IManagedObjHandle MakePipe(IManagedObjHandle handle, double r);

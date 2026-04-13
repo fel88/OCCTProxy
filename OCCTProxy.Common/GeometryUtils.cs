@@ -8,6 +8,7 @@ namespace OCCTProxy.Common
 {
     public class GeometryUtils
     {
+
         public static BlueprintContour[] ConnectContour(BlueprintItem[] items)
         {
             List<BlueprintContour> rets = new List<BlueprintContour>();

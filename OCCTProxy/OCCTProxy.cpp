@@ -30,7 +30,7 @@
 #include <BRep_Builder.hxx>
 #include <BRepTools.hxx>
 #include <BRepTools_History.hxx>
-
+#include <ShapeAnalysis_FreeBounds.hxx>
 
 #include <AIS_ViewController.hxx>
 
@@ -84,6 +84,8 @@
 #include < BRepAlgoAPI_Fuse.hxx>
 #include < BRepAlgoAPI_Common.hxx>
 #include < BRepAlgoAPI_Cut.hxx>
+#include < BRepAlgoAPI_Section.hxx>
+
 #include <vcclr.h>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepPrimAPI_MakeSphere.hxx>
@@ -1833,6 +1835,52 @@ public:
 			return shape2;
 		}
 		return shape;
+	}
+
+	TopoDS_Shape MakeSection(ObjHandle h1, double px, double py, double pz, double vx, double vy, double vz, bool connect) {
+		auto obj1 = findObject(h1);
+		// 1. Assume 'myShape' is the shape you want to cut
+// 2. Define a plane (e.g., origin at 0,0,0, normal along Z-axis)
+		gp_Pln aPlane(gp_Pnt(px, py, pz), gp_Dir(vx, vy, vz));
+
+		// 3. Create a large enough face representing the plane
+		TopoDS_Face aPlaneFace = BRepBuilderAPI_MakeFace(aPlane);
+
+
+		TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(obj1)->Shape();
+		shape0 = shape0.Located(obj1->LocalTransformation());
+		// 4. Compute the section
+		BRepAlgoAPI_Section aSection(shape0, aPlaneFace);
+		aSection.Build();
+		TopoDS_Shape aSectionEdges = aSection.Shape(); // Results in Compound of edges
+
+
+
+		/*if (fixShape) {
+			ShapeUpgrade_UnifySameDomain unif(shape, true, true, false);
+			unif.Build();
+			auto shape2 = unif.Shape();
+			return shape2;
+		}*/
+
+		if (connect) {
+			// Extract edges
+			
+			Handle(TopTools_HSequenceOfShape) edges = new TopTools_HSequenceOfShape();
+			for (TopExp_Explorer aExpFace(aSectionEdges, TopAbs_EDGE); aExpFace.More(); aExpFace.Next())
+			{
+				edges->Append(aExpFace.Current());
+			}
+			Handle(TopTools_HSequenceOfShape) connected_wires = new TopTools_HSequenceOfShape(); //Will hold the wires found
+			
+			// Connect edges to wires(0.0 is tolerance)
+			// The 'false' parameter means 'do not manage small edges'
+			// The 'true' parameter means 'only closed wires' (set to false for open)
+			ShapeAnalysis_FreeBounds::ConnectEdgesToWires(edges, 0.0, false, connected_wires);
+			return connected_wires->First();
+		}
+
+		return aSectionEdges;
 	}
 
 	TopoDS_Shape MakeBoolFuse(ObjHandle h1, ObjHandle h2, bool fixShape = true) {
@@ -3960,6 +4008,22 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
+		virtual IManagedObjHandle^ MakeSection(IManagedObjHandle^ mh1, double px, double py, double pz, double vx, double vy, double vz, bool connect) {
+			ObjHandle h1 = ObjHandle(mh1);
+
+			const auto ret = impl->MakeSection(h1, px, py, pz, vx, vy, vz,connect);
+
+			auto ais = new AIS_Shape(ret);
+			myAISContext()->Display(ais, false);
+
+			ManagedObjHandle^ hhh = gcnew ManagedObjHandle();
+
+			auto hn = GetHandle(*ais);
+			hhh->FromObjHandle(hn);
+			hhh->ShapeType = ret.ShapeType();
+			return hhh;
+		}
+
 		virtual IManagedObjHandle^ MakeFuse(IManagedObjHandle^ mh1, IManagedObjHandle^ mh2) {
 			ObjHandle h1 = ObjHandle(mh1);
 			ObjHandle h2 = ObjHandle(mh2);
@@ -3987,7 +4051,7 @@ namespace OCCTProxy {
 			return Clone(h->BindId);
 		}
 
-		virtual IManagedObjHandle^ Clone(int id) 
+		virtual IManagedObjHandle^ Clone(int id)
 		{
 			BRepBuilderAPI_Copy copy;
 
@@ -4010,13 +4074,13 @@ namespace OCCTProxy {
 
 		}
 
-		virtual IManagedObjHandle^ MakePrism(IManagedObjHandle^ m, double height) {
+		virtual IManagedObjHandle^ MakePrism(IManagedObjHandle^ m, Vector3d height) {
 			ObjHandle h = ObjHandle(m);
 			BRepBuilderAPI_MakeFace bface;
 			auto			 object1 = impl->findObject(h);
 
 			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
-			auto compound = TopoDS::Compound(shape0);
+			//auto compound = TopoDS::Compound(shape0);
 
 			int counter = 0;
 			for (TopExp_Explorer aExpFace(shape0, TopAbs_WIRE); aExpFace.More(); aExpFace.Next())
@@ -4044,10 +4108,13 @@ namespace OCCTProxy {
 				//}					
 			}
 
+			if (counter == 0)
+				return {};
+
 			auto profile = bface.Face();
 			//myAISContext()->Display(new AIS_Shape(profile), true);
 
-			gp_Vec vec(0, 0, height);
+			gp_Vec vec(height.X, height.Y, height.Z);
 			auto body = BRepPrimAPI_MakePrism(profile, vec);
 
 			auto shape = body.Shape();
@@ -4093,17 +4160,17 @@ namespace OCCTProxy {
 
 				ttt = ttt.Located(object1->LocalTransformation());
 
-				const auto& edgee = TopoDS::Face(ttt);
+				const auto& face = TopoDS::Face(ttt);
 
 
-				if (edgee.IsNull()) {
+				if (face.IsNull()) {
 					continue;
 				}
 				if (ind == h.bindId) {
 
 
 					TopLoc_Location aLocation;
-					Handle(Geom_Surface) aSurf = BRep_Tool::Surface(edgee, aLocation);
+					Handle(Geom_Surface) aSurf = BRep_Tool::Surface(face, aLocation);
 
 					auto plane = Handle(Geom_Plane)::DownCast(aSurf);
 
@@ -4124,7 +4191,7 @@ namespace OCCTProxy {
 					pos.Y = aPnt.Y();
 					pos.Z = aPnt.Z();
 
-					auto orient = edgee.Orientation();
+					auto orient = face.Orientation();
 
 					auto dir = pln.Axis().Direction().Transformed(aLocation.Transformation());
 					if (orient == TopAbs_REVERSED) {
@@ -4133,7 +4200,7 @@ namespace OCCTProxy {
 					gp_Vec vec(dir.X(), dir.Y(), dir.Z());
 					vec *= height;
 
-					auto body = BRepPrimAPI_MakePrism(edgee, vec);
+					auto body = BRepPrimAPI_MakePrism(face, vec);
 
 					auto shape = body.Shape();
 					//BRepMesh_IncrementalMesh mesh(shape,0.00001);
@@ -4857,7 +4924,6 @@ namespace OCCTProxy {
 			ManagedObjHandle^ hh = safe_cast<ManagedObjHandle^>(h1);
 			return GetEdgesInfo(hh);
 		}
-
 		List<IEdgeInfo^>^ GetEdgesInfo(ManagedObjHandle^ h1) {
 			List<IEdgeInfo^>^ rett = gcnew List<IEdgeInfo^>();
 			auto hh = h1->ToObjHandle();
@@ -4946,6 +5012,58 @@ namespace OCCTProxy {
 			}
 			return rett;
 		}
+
+		virtual List<IWireInfo^>^ GetWiresInfo(IManagedObjHandle^ h1) {
+			ManagedObjHandle^ hh = safe_cast<ManagedObjHandle^>(h1);
+			return GetWiresInfo(hh);
+		}
+
+		List<IWireInfo^>^ GetWiresInfo(ManagedObjHandle^ h1) {
+			List<IWireInfo^>^ rett = gcnew List<IWireInfo^>();
+			auto hh = h1->ToObjHandle();
+			auto object1 = impl->findObject(hh);
+			//const auto* object1 = impl->getObject(hh);
+			TopoDS_Shape shape0 = Handle(AIS_Shape)::DownCast(object1)->Shape();
+			//shape0 = shape0.Located(object1->LocalTransformation());
+			int indp = AddOrGetShapeIndex(shape0);
+
+			for (TopExp_Explorer exp(shape0, TopAbs_WIRE); exp.More(); exp.Next()) {
+				const auto _ttt = exp.Current();
+				int ind = AddOrGetShapeIndex(_ttt);
+				auto ttt = _ttt.Located(object1->LocalTransformation());
+
+				const auto& edgee = TopoDS::Wire(ttt);
+
+				if (edgee.IsNull())
+					continue;
+
+				GProp_GProps massProps;
+				BRepGProp::LinearProperties(ttt, massProps);
+				auto len = massProps.Mass();
+
+				gp_Pnt gPt = massProps.CentreOfMass();
+
+
+				WireInfo^ ret = gcnew WireInfo();
+
+				ret->BindId = ind;
+				ret->AisShapeBindId = indp;
+
+
+				Vector3d com;
+
+				com.X = gPt.X();
+				com.Y = gPt.Y();
+				com.Z = gPt.Z();
+
+				ret->COM = com;
+
+
+				rett->Add(ret);
+			}
+			return rett;
+		}
+
 
 		virtual IManagedObjHandle^ MakeChamfer(IManagedObjHandle^ h1, double s)
 		{
@@ -5459,7 +5577,7 @@ namespace OCCTProxy {
 			return hhh;
 		}
 
-		virtual IManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l) {
+		virtual IManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l, bool loadOnly) {
 
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 			//myAISContext()->SetDisplayMode(prs, AIS_Shaded, false);
@@ -5471,8 +5589,13 @@ namespace OCCTProxy {
 			auto solid = box.Solid();
 			auto shape = new AIS_Shape(solid);
 
-			myAISContext()->Display(shape, Standard_True);
-			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			if (!loadOnly) {
+				myAISContext()->Display(shape, Standard_True);
+				myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			}
+			else
+				myAISContext()->Load(shape, -1);
+
 			auto hn = GetHandle(*shape);
 			hh->FromObjHandle(hn);
 			return hh;

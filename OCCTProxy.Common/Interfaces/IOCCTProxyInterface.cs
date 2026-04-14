@@ -68,6 +68,8 @@ namespace OCCTProxy.Common.Interfaces
         void ActivateGrid(bool enabled);
         void AxoView();
         void SetAutoViewerUpdate(bool v);
+        IManagedObjHandle MakeSection(IManagedObjHandle mh1, double px, double py, double pz, double vx, double vy, double vz, bool connect);
+
         IManagedObjHandle MakeFuse(IManagedObjHandle h1, IManagedObjHandle h2);
         IManagedObjHandle MakeDiff(IManagedObjHandle h1, IManagedObjHandle h2);
         IManagedObjHandle MakeCommon(IManagedObjHandle h1, IManagedObjHandle h2);
@@ -83,6 +85,7 @@ namespace OCCTProxy.Common.Interfaces
         List<ISurfInfo> GetFacesInfo(IManagedObjHandle managedObjHandle);
         List<IEdgeInfo> GetEdgesInfo(IManagedObjHandle managedObjHandle);
         List<IVertInfo> GetVertsInfo(IManagedObjHandle managedObjHandle);
+        List<IWireInfo> GetWiresInfo(IManagedObjHandle managedObjHandle);
         void SetDefaultGradient();
         void BackView();
         void BottomView();
@@ -93,7 +96,7 @@ namespace OCCTProxy.Common.Interfaces
         void SetMatrixValues(IManagedObjHandle h, List<double> m);
         IManagedObjHandle MakeCone(double r1, double r2, double h);
         IManagedObjHandle MakeChamfer(IManagedObjHandle so, double r);
-        IManagedObjHandle MakePrism(IManagedObjHandle managedObjHandle, double h);
+        IManagedObjHandle MakePrism(IManagedObjHandle managedObjHandle, Vector3d h);
         IManagedObjHandle Clone(IManagedObjHandle so);
         IManagedObjHandle Clone(ITopObjHandle so);
         IManagedObjHandle Clone(int id);
@@ -113,7 +116,8 @@ namespace OCCTProxy.Common.Interfaces
         void MoveTo(int x, int y);
         void Pan(int x, int y);
         void Rotation(int x, int y);
-        IManagedObjHandle MakeBox(double x, double y, double z, double w, double l, double h);
+
+        IManagedObjHandle MakeBox(double x, double y, double z, double w, double l, double h, bool loadOnly = false);
         void SetBackgroundColor(int r1, int g1, int b1, int r2, int g2, int b2);
         bool InitViewer(nint handle);
         void SetMaterial(int v);

@@ -25,6 +25,7 @@
 #include <TopoDS_TEdge.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopExp_Explorer.hxx>
+#include <GeomLProp_SLProps.hxx>
 
 //brep tools
 #include <BRep_Builder.hxx>
@@ -4574,8 +4575,21 @@ namespace OCCTProxy {
 			Vector3d pos;
 			Vector3d nrm;
 
-			CylinderSurfInfo^ ret = gcnew CylinderSurfInfo();
+			Standard_Real umin, umax, vmin, vmax;
+			BRepTools::UVBounds(aFace, umin, umax, vmin, vmax);
 
+			CylinderSurfInfo^ ret = gcnew CylinderSurfInfo();
+			// 2. Compute normal using SLProps at a specific UV point (e.g., center)
+			Standard_Real uMid = (umin + umax) * 0.5;
+			Standard_Real vMid = (vmin + vmax) * 0.5;
+			// Calculate 3D point
+			gp_Pnt p3d = aSurf->Value(uMid, vMid);
+			GeomLProp_SLProps props(aSurf, uMid, vMid, 1, 0.01);
+			gp_Dir normal = props.Normal();
+			// 3. Reverse if face is reversed
+			if (aFace.Orientation() == TopAbs_REVERSED) {
+				normal.Reverse();
+			}
 			GProp_GProps massProps;
 			BRepGProp::SurfaceProperties(ttt, massProps);
 			gp_Pnt gPt = massProps.CentreOfMass();
@@ -4594,6 +4608,8 @@ namespace OCCTProxy {
 			ret->Position = pos;
 			ret->Radius = rad;
 			ret->Axis = nrm;
+			ret->Normal = Vector3d(normal.X(), normal.Y(), normal.Z());
+			ret->NormalOrigin = Vector3d(p3d.X(), p3d.Y(), p3d.Z());
 			return ret;
 		}
 

@@ -11,5 +11,8 @@ namespace OCCTProxy.Common
         public int BindId { get; set; }
         public int AisShapeBindId { get; set; }//parent
         public int Type { get; set; }
+        public Vector3d Normal { get; set; }
+        public Vector3d NormalOrigin { get; set; }
+
     }
 }

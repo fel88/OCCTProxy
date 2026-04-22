@@ -2,9 +2,11 @@
 
 namespace OCCTProxy.Common.Interfaces
 {
-    public interface ICylinderSurfInfo
+    public interface ICylinderSurfInfo : ISurfInfo
     {
         Vector3d Axis { get; set; }
         double Radius { get; set; }
+        Vector3d Normal { get; set; }
+
     }
 }

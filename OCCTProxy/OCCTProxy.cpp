@@ -1866,14 +1866,14 @@ public:
 
 		if (connect) {
 			// Extract edges
-			
+
 			Handle(TopTools_HSequenceOfShape) edges = new TopTools_HSequenceOfShape();
 			for (TopExp_Explorer aExpFace(aSectionEdges, TopAbs_EDGE); aExpFace.More(); aExpFace.Next())
 			{
 				edges->Append(aExpFace.Current());
 			}
 			Handle(TopTools_HSequenceOfShape) connected_wires = new TopTools_HSequenceOfShape(); //Will hold the wires found
-			
+
 			// Connect edges to wires(0.0 is tolerance)
 			// The 'false' parameter means 'do not manage small edges'
 			// The 'true' parameter means 'only closed wires' (set to false for open)
@@ -4012,7 +4012,7 @@ namespace OCCTProxy {
 		virtual IManagedObjHandle^ MakeSection(IManagedObjHandle^ mh1, double px, double py, double pz, double vx, double vy, double vz, bool connect) {
 			ObjHandle h1 = ObjHandle(mh1);
 
-			const auto ret = impl->MakeSection(h1, px, py, pz, vx, vy, vz,connect);
+			const auto ret = impl->MakeSection(h1, px, py, pz, vx, vy, vz, connect);
 
 			auto ais = new AIS_Shape(ret);
 			myAISContext()->Display(ais, false);
@@ -5482,7 +5482,7 @@ namespace OCCTProxy {
 			//const auto* object1 = impl->getObject(hh);
 			const auto object1 = impl->findObject(hh);
 			std::vector<ObjHandle> edges;
-			for each (IEdgeInfo ^ t in mEdges)
+			for each(IEdgeInfo ^ t in mEdges)
 			{
 				edges.push_back(ObjHandle(t));
 			}
@@ -5591,6 +5591,47 @@ namespace OCCTProxy {
 			auto hn = GetHandle(*ais);
 			hhh->FromObjHandle(hn);
 			return hhh;
+		}
+
+		virtual IManagedObjHandle^ MakeRectFace(Vector3d v1, Vector3d v2, Vector3d v3, Vector3d v4) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+			//myAISContext()->SetDisplayMode(prs, AIS_Shaded, false);
+
+			// Define 4 points for the rectangle
+			gp_Pnt p1(v1.X, v1.Y, v1.Z);
+			gp_Pnt p2(v2.X, v2.Y, v2.Z);
+			gp_Pnt p3(v3.X, v3.Y, v3.Z);
+			gp_Pnt p4(v4.X, v4.Y, v4.Z);
+
+			// Create Edges
+			TopoDS_Edge e1 = BRepBuilderAPI_MakeEdge(p1, p2);
+			TopoDS_Edge e2 = BRepBuilderAPI_MakeEdge(p2, p3);
+			TopoDS_Edge e3 = BRepBuilderAPI_MakeEdge(p3, p4);
+			TopoDS_Edge e4 = BRepBuilderAPI_MakeEdge(p4, p1);
+
+			// Create Wire (Closed Contour)
+			BRepBuilderAPI_MakeWire mw;
+			mw.Add(e1);
+			mw.Add(e2);
+			mw.Add(e3);
+			mw.Add(e4);
+			TopoDS_Wire wire = mw.Wire();
+
+			// Create Face
+			TopoDS_Face face = BRepBuilderAPI_MakeFace(wire);
+
+			auto solid = face;
+			auto shape = new AIS_Shape(solid);
+
+
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+
+
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
 		}
 
 		virtual IManagedObjHandle^ MakeBox(double x, double y, double z, double w, double h, double l, bool loadOnly) {

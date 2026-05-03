@@ -117,6 +117,7 @@ namespace OCCTProxy.Common.Interfaces
         void Pan(int x, int y);
         void Rotation(int x, int y);
 
+        IManagedObjHandle MakeRectFace(Vector3d v1, Vector3d v2, Vector3d v3, Vector3d v4);
         IManagedObjHandle MakeBox(double x, double y, double z, double w, double l, double h, bool loadOnly = false);
         void SetBackgroundColor(int r1, int g1, int b1, int r2, int g2, int b2);
         bool InitViewer(nint handle);

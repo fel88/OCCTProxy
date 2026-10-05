@@ -797,7 +797,7 @@ void GlfwOcctView::runOpenTk(IntPtr wnd, IntPtr glctx)
 
 
 	myView->MustBeResized();
-	//myOcctWindow->Map();
+	//myOcctWindow->Map();	
 	initGui();
 	//mainloop();
 	//cleanup();
@@ -1962,7 +1962,7 @@ namespace OCCTProxy {
 
 
 			myView()->MustBeResized();
-			//myOcctWindow->Map();
+			//myOcctWindow->Map();			
 			initGui();
 			//mainloop();
 			//cleanup();
@@ -5482,7 +5482,7 @@ namespace OCCTProxy {
 			//const auto* object1 = impl->getObject(hh);
 			const auto object1 = impl->findObject(hh);
 			std::vector<ObjHandle> edges;
-			for each(IEdgeInfo ^ t in mEdges)
+			for each (IEdgeInfo ^ t in mEdges)
 			{
 				edges.push_back(ObjHandle(t));
 			}
@@ -5663,6 +5663,24 @@ namespace OCCTProxy {
 			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
 
 			BRepPrimAPI_MakeCylinder cyl(r, h);
+			cyl.Build();
+			auto solid = cyl.Solid();
+			auto shape = new AIS_Shape(solid);
+			myAISContext()->Display(shape, Standard_True);
+			myAISContext()->SetDisplayMode(shape, AIS_Shaded, false);
+			auto hn = GetHandle(*shape);
+			hh->FromObjHandle(hn);
+			return hh;
+		}
+
+		virtual IManagedObjHandle^ MakeCylinder(Vector3d origin, Vector3d axis, double r, double h) {
+
+			ManagedObjHandle^ hh = gcnew ManagedObjHandle();
+
+			gp_Ax2 ax(gp_Pnt(origin.X, origin.Y, origin.Z),
+				gp_Dir(axis.X, axis.Y, axis.Z));
+
+			BRepPrimAPI_MakeCylinder cyl(ax, r, h);
 			cyl.Build();
 			auto solid = cyl.Solid();
 			auto shape = new AIS_Shape(solid);

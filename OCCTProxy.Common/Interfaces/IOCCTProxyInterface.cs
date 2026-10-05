@@ -3,6 +3,7 @@ using OpenTK.Mathematics;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace OCCTProxy.Common.Interfaces
 {
@@ -110,6 +111,7 @@ namespace OCCTProxy.Common.Interfaces
         IManagedObjHandle MirrorObject(IManagedObjHandle handle, Vector3d dir, Vector3d pnt, bool axis2, bool rel);
         IManagedObjHandle MakeSphere(double r);
         IManagedObjHandle MakeCylinder(double r, double h);
+        IManagedObjHandle MakeCylinder(Vector3d origin, Vector3d axis, double r, double h);
         IManagedObjHandle MakeTorus(double r1, double r2);
         bool ExportStep(ITopObjHandle handle, string fileName, bool located = true);
         List<byte> ExportStepStream(ITopObjHandle handle, bool located = true);

@@ -643,6 +643,7 @@ private:
 
 public:
 
+	ImGuiContext* imguiCtx;
 	Handle(GlfwOcctWindow) myOcctWindow;
 	Handle(V3d_View) myView;
 	Handle(V3d_Viewer) myViewer;
@@ -955,10 +956,12 @@ void GlfwOcctView::initGui(void* wnd)
 void GlfwOcctView::initGui()
 {
 	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
+	//auto imguiContext =	ImGui::CreateContext();
 
+		//ImGui::SetCurrentContext(imguiContext);
 	ImGuiIO& aIO = ImGui::GetIO();
 	aIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	//aIO.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
 	ImGui_ImplGlfw_InitForOpenGL(myOcctWindow->getGlfwWindow(), Standard_True);
 	ImGui_ImplOpenGL3_Init("#version 330");
@@ -971,6 +974,7 @@ bool show_dialog = true;
 
 void GlfwOcctView::StartRenderGui()
 {
+	ImGui::SetCurrentContext(imguiCtx);
 
 	ImGuiIO& aIO = ImGui::GetIO();
 
@@ -1146,6 +1150,8 @@ void GlfwOcctView::MouseMove(double x, double y)
 }
 
 void GlfwOcctView::MouseScroll(int x, int y, int theOffsetY) {
+	ImGui::SetCurrentContext(imguiCtx);
+
 	ImGuiIO& aIO = ImGui::GetIO();
 	if (myView.IsNull() || aIO.WantCaptureMouse)
 	{
@@ -1159,6 +1165,8 @@ void GlfwOcctView::MouseScroll(int x, int y, int theOffsetY) {
 }
 
 bool GlfwOcctView::ImGuiMouseDown(int btn, double x, double y) {
+	ImGui::SetCurrentContext(imguiCtx);
+
 	ImGuiIO& aIO = ImGui::GetIO();
 	if (myView.IsNull() || aIO.WantCaptureMouse)
 	{
@@ -1193,6 +1201,8 @@ void GlfwOcctView::MouseDown(int btn, double x, double y)
 
 bool GlfwOcctView::ImGuiMouseUp(int btn, double x, double y)
 {
+	ImGui::SetCurrentContext(imguiCtx);
+
 	ImGuiIO& aIO = ImGui::GetIO();
 	if (myView.IsNull() || aIO.WantCaptureMouse)
 	{
@@ -1266,7 +1276,7 @@ void GlfwOcctView::cleanup()
 		myOcctWindow->Close();
 	}
 
-	glfwTerminate();
+	//glfwTerminate();
 }
 
 // ================================================================
@@ -1293,6 +1303,8 @@ void GlfwOcctView::onResize(int theWidth, int theHeight)
 // ================================================================
 void GlfwOcctView::onMouseScroll(double theOffsetX, double theOffsetY)
 {
+	ImGui::SetCurrentContext(imguiCtx);
+
 	ImGuiIO& aIO = ImGui::GetIO();
 	if (!myView.IsNull() && !aIO.WantCaptureMouse)
 	{
@@ -1367,6 +1379,7 @@ void GlfwOcctView::onMouseMove(int thePosX, int thePosY)
 	{
 		return;
 	}
+	ImGui::SetCurrentContext(imguiCtx);
 
 	ImGuiIO& aIO = ImGui::GetIO();
 	aIO.AddMousePosEvent((float)thePosX, (float)thePosY);
@@ -2094,7 +2107,9 @@ namespace OCCTProxy {
 		virtual void initGui()
 		{
 			IMGUI_CHECKVERSION();
-			ImGui::CreateContext();
+			ImGuiContext* imGuictx = ImGui::CreateContext();
+			ImGui::SetCurrentContext(imGuictx);
+			gview->imguiCtx = imGuictx;
 
 			ImGuiIO& aIO = ImGui::GetIO();
 			aIO.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -2106,8 +2121,8 @@ namespace OCCTProxy {
 			//ImGui::StyleColorsClassic();
 		}
 
-		static OCCImpl* impl = new OCCImpl();
-		static GlfwOcctView* gview = new GlfwOcctView();
+		 OCCImpl* impl = new OCCImpl();
+		 GlfwOcctView* gview = new GlfwOcctView();
 		// ============================================
 		// Viewer functionality
 		// ============================================

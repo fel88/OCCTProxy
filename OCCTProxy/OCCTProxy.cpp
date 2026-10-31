@@ -566,6 +566,7 @@ public:
 
 	//! Create 3D Viewer.
 	void initViewer();
+	void initHeadlessViewer();
 	void initViewer(WNT_Window* wnd, void* glctx);
 	void initViewer(void* glctx);
 	void ShowStats(bool status);
@@ -936,6 +937,40 @@ void GlfwOcctView::initViewer(void* glctx)
 	myContext->Display(aCube, false);
 }
 
+void GlfwOcctView::initHeadlessViewer()
+{
+
+	Handle(Aspect_DisplayConnection) aDisplayConnection;
+	Handle(OpenGl_GraphicDriver) aGraphicDriver
+		= new OpenGl_GraphicDriver(aDisplayConnection);
+
+	aGraphicDriver->SetBuffersNoSwap(Standard_True);
+
+	Handle(V3d_Viewer) aViewer = new V3d_Viewer(aGraphicDriver);
+	myViewer = aViewer;
+	aViewer->SetDefaultLights();
+	aViewer->SetLightOn();
+	//aViewer->SetDefaultTypeOfView(V3d_PERSPECTIVE);
+	aViewer->ActivateGrid(Aspect_GT_Rectangular, Aspect_GDM_Lines);
+	myView = aViewer->CreateView();
+	//myView->SetImmediateUpd/ate(Standard_False);
+
+	
+
+	myContext = new AIS_InteractiveContext(aViewer);
+
+	Handle(AIS_ViewCube) aCube = new AIS_ViewCube();
+	aCube->SetSize(55);
+	aCube->SetFontHeight(12);
+	aCube->SetAxesLabels("X", "Y", "Z");
+	aCube->SetTransformPersistence(new Graphic3d_TransformPers(Graphic3d_TMF_TriedronPers, Aspect_TOTP_LEFT_LOWER, Graphic3d_Vec2i(100, 100)));
+	aCube->SetViewAnimation(this->ViewAnimation());
+	aCube->SetFixedAnimationLoop(false);
+
+
+
+	myContext->Display(aCube, false);
+}
 void GlfwOcctView::initGui(void* wnd)
 {
 	IMGUI_CHECKVERSION();
@@ -1980,6 +2015,26 @@ namespace OCCTProxy {
 			//mainloop();
 			//cleanup();
 		}
+		
+		virtual void runHeadless()
+		{
+			
+			gview->initHeadlessViewer();
+			
+			initDemoScene();
+			myView() = gview->myView;
+			myViewer() = gview->myViewer;
+			myAISContext() = gview->myContext;
+			impl->setAisCtx(myAISContext());
+			SetDefaultDrawerParams();
+			SetDefaultGradient();
+			if (myView().IsNull())
+				return;
+
+
+			myView()->MustBeResized();			
+		}
+
 		virtual void MouseMove(int x, int y) {
 			gview->MouseMove(x, y);
 		}

@@ -12,6 +12,7 @@ namespace OCCTProxy.Common.Interfaces
         bool ImGuiMouseUp(int btn, int x, int y);
         bool ImGuiMouseDown(int btn, int x, int y);
         void runOpenTk(nint wnd, nint glctx);
+        void runHeadless();
         bool InitViewer2(nint glctx);
         void MouseMove(int x, int y);
         void cleanup();
